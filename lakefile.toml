@@ -1,0 +1,12 @@
+name = "non-euclidean-pid"
+version = "0.1.0"
+defaultTargets = ["NonEuclideanPid"]
+
+[[lean_lib]]
+name = "NonEuclideanPid"
+
+[[require]]
+name = "Paperproof"
+git = "https://github.com/Paper-Proof/paperproof.git"
+subDir = "lean"
+rev = "main"
