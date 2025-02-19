@@ -1,12 +1,13 @@
 import Paperproof
-
 set_option quotPrecheck false
 open Classical
 
 variable (α : Type)
 
-theorem contrapositive (p q : Prop) : (¬q → ¬p) → (p → q) :=
-  λ h₁ => λ h₂ => byContradiction (λ h₃ => (h₁ h₃) h₂)
+theorem contrapositive (p q : Prop) : (¬q → ¬p) ↔ (p → q) := by
+  apply Iff.intro
+  . exact λ h₁ => λ h₂ => byContradiction (λ h₃ => (h₁ h₃) h₂)
+  . exact λ h₁ => λ h₂ => byContradiction (λ h₃ => h₂ (h₁ (not_not.mp h₃)))
 
 /- --------------- -/
 /- Subset handling -/
@@ -29,28 +30,38 @@ infix:100 " ∉ " => not_In α
 infix:100 " ∈ₙ " => In Nat
 infix:100 " ∉ₙ " => not_In Nat
 
-theorem naturals_are_well_ordered (s : Set Nat) : (∃ _ : ↑s, True) → (∃ x : ↑s, ∀ y : ↑s, x.val ≤ y.val) :=
-  λ h => (
-    byContradiction λ abs => (
-      have no_less_no_me : ∀ y : Nat, (∀ x : ↑s, y ≤ x) → y ∉ₙ s := λ y => λ h₁ => byContradiction (
-        λ h₂ => abs (Exists.intro (Subtype.mk y (not_not.mp h₂)) (λ z => h₁ z))
-      )
-      have nothing_in_s : ∀ x : Nat, x ∉ₙ s := λ x => Nat.strongRecOn x (λ n => λ i => (
-        have no_less : (∀ x : ↑s, n ≤ x) := λ x => byContradiction (λ abs => (i x (Nat.lt_of_not_le abs)) x.property)
-        show _ from no_less_no_me n no_less
-      ))
-      have s_is_empty : ¬ ∃ _ : ↑s, True := Not.intro (λ i => i.elim (λ v => λ _ => nothing_in_s v v.property))
-      show _ from s_is_empty h
-    )
-  )
+theorem naturals_are_well_ordered (s : Set Nat) : (∃ _ : ↑s, True) → (∃ x : ↑s, ∀ y : ↑s, x.val ≤ y.val) := by
+  intro h
+  apply byContradiction
+  intro abs
+  have no_less_no_me : ∀ y : Nat, (∀ x : ↑s, y ≤ x) → y ∉ₙ s := by
+    intro y h₁
+    apply byContradiction
+    intro h₂
+    apply abs
+    exact (Exists.intro (Subtype.mk y (not_not.mp h₂)) (λ z => h₁ z))
+  have nothing_in_s : ∀ x : Nat, x ∉ₙ s := by
+    intro x
+    exact Nat.strongRecOn x (by
+    intro n i
+    apply no_less_no_me n
+    intro x
+    apply byContradiction
+    intro abs
+    exact i x (Nat.lt_of_not_le abs) x.property)
+  revert h
+  apply Not.intro
+  intro i
+  apply i.elim
+  intro v _
+  exact nothing_in_s v v.property
 
 theorem function_to_the_naturals_has_min (f : α → Nat) : (∃ _ : α, True) → (∃ x : α, ∀ y : α, f x ≤ f y) := by
-  let im : Set Nat := λ n => ∃ a : α, f a = n
-  let image : α → ↑im := λ x => Subtype.mk (f x) (Exists.intro x rfl)
-
+  let im : Set Nat := λ n => ∃ a : α, f a = n -- SUS
+  let image : α → ↑im := λ x => Subtype.mk (f x) (Exists.intro x rfl) -- $S N S^(-1)$
   intro h
   have im_has_min := by
-    apply naturals_are_well_ordered im
+    apply naturals_are_well_ordered im -- sus
     apply h.elim
     intro v _
     exact (Exists.intro (image v) trivial)
@@ -68,6 +79,7 @@ theorem function_to_the_naturals_has_min (f : α → Nat) : (∃ _ : α, True) �
   intro x
   rw [η₂]
   exact η₁ (image x)
+
 
 /- ------------------------- -/
 /- Basic algebra definitions -/
@@ -219,7 +231,7 @@ theorem generated_ideal_is_ideal (i : Set α) : is_generated_ideal α ρ i → i
     ((generated_ideal_is_nonempty α ρ i) h)
 
 def no_divisors_of_0 : Prop :=
-  ∀ x y : α, ¬is_neutral α ρ.val.ϕ.val (x *ᵣ y) → (is_neutral α ρ.val.ϕ.val x ∨ is_neutral α ρ.val.ϕ.val y)
+  ∀ x y : α, is_neutral α ρ.val.ϕ.val (x *ᵣ y) → (is_neutral α ρ.val.ϕ.val x ∨ is_neutral α ρ.val.ϕ.val y)
 
 def domain : Type :=
   { ρ // no_divisors_of_0 α ρ }
@@ -242,7 +254,10 @@ def is_dedekind_hasse_norm (h : α → Nat) : Prop :=
     h ((s * u) + (t * v)) ≠ 0 ∧ h ((s * u) + (t * v)) < h u
   ))
 
-theorem has_dedekind_hasse_norm_implies_pid (h: α → Nat) : is_dedekind_hasse_norm α δ h → is_principal_ideal_domain α δ := by
+def nonzero : Type :=
+  { x : α // ¬ is_neutral α δ.val.val.ϕ.val x }
+
+theorem has_dedekind_hasse_norm_implies_pid (h : α → Nat) : is_dedekind_hasse_norm α δ h → is_principal_ideal_domain α δ := by
   intro dh_norm ideal is_id
   let δ' : Type := { x : ↑ideal // ¬ is_neutral α δ.val.val.ϕ.val x }
   apply (em (∃ _ : ↑δ', True)).elim
@@ -324,3 +339,94 @@ theorem has_dedekind_hasse_norm_implies_pid (h: α → Nat) : is_dedekind_hasse_
       intro r hr
       rw [←hr]
       exact (is_id.absorbs (Subtype.mk z z₀) r).left
+
+def is_euclidean_norm (g : nonzero α δ → Nat) : Prop :=
+  (
+    ∀ z : nonzero α δ, ∀ x y : nonzero α δ, z.val = x.val * y.val → g z ≥ g x
+  )
+  ∧
+  (
+    ∀ a: α, ∀ b : nonzero α δ,
+    (∃ q : α, a = b.val * q)
+    ∨
+    (∃ q : α, ∃ r : nonzero α δ, a = (b.val * q) + r.val ∧ g r < g b)
+  )
+
+theorem invertibles_iff_least_degree (g : nonzero α δ → Nat) :
+is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y ≥ g x) ↔ (∃ x' : α, is_neutral α δ.val.val.ψ.val (x.val * x')) := by
+  intro h x
+  apply δ.val.val.ψ.property.neu.elim
+  intro one is_one
+  apply δ.val.val.ϕ.property.neu.elim
+  intro zero is_zero
+  cases em (zero ≠ one) with
+  | inl non_stupid =>
+    apply Iff.intro
+    . intro η
+      apply Or.elim (h.right one x)
+      . intro ex
+        apply Exists.elim ex
+        intro x' eq
+        apply Exists.intro x'
+        rw [←eq]
+        exact is_one
+      . intro ex
+        apply Exists.elim ex
+        intro q hq
+        apply Exists.elim hq
+        intro r hr
+        have not_min := hr.right
+        have min := Nat.not_lt_of_ge (η r)
+        contradiction
+    . intro η
+      apply η.elim
+      intro x' hx' y
+      have inv_ex : x.val * (y.val * x') = y.val := calc
+        x.val * (y.val * x') = (y.val * x') * x.val := by rw [δ.val.val.ψ.property.com]
+        _ = y.val * (x' * x.val) := by rw [δ.val.val.ψ.property.ass]
+        _ = y.val * (x.val * x') := by rw [δ.val.val.ψ.property.com x.val x']
+        _ = y.val := (hx' y.val).right
+      have inv_non_zero : ¬ is_neutral α δ.val.val.ϕ.val (y.val * x') := by
+        apply byContradiction
+        intro abs
+        rw [not_not] at abs
+        rw [←zero_absorbs_ψ α δ.val (y.val * x') abs x.val] at abs
+        rw [inv_ex] at abs
+        exact y.property abs
+      let comb : nonzero α δ := (Subtype.mk (y.val * x') inv_non_zero)
+      apply h.left y x comb
+      exact inv_ex.symm
+  | inr stupid =>
+    have stupid : zero = one := by
+      apply byContradiction
+      intro abs
+      rw [←Ne.eq_1 zero one] at abs
+      contradiction
+    have all_zero : ∀ x : α, x = zero := by
+      intro x
+      calc
+        x = one * x := (is_one x).left.symm
+        _ = zero * x := by rw [stupid]
+        _ = x * zero := by rw [δ.val.val.ψ.property.com]
+        _ = zero := zero_absorbs_ψ α δ.val zero is_zero x
+    have l_is_true : ∀ (y : nonzero α δ), g y ≥ g x := by
+      apply byContradiction
+      intro abs
+      rw [not_forall] at abs
+      apply abs.elim
+      intro v _
+      have v_is_not_neutral := v.property
+      have v_is_neutral : is_neutral α δ.val.val.ϕ.val v.val := by
+        rw [all_zero v.val]
+        exact is_zero
+      contradiction
+    have r_is_true : ∃ x' : α, is_neutral α δ.val.val.ψ.val (x.val * x') := by
+      apply Exists.intro zero
+      rw [zero_absorbs_ψ]
+      rw [stupid]
+      repeat assumption
+    apply Iff.intro
+    . intro
+      exact r_is_true
+    . intro
+      exact l_is_true
