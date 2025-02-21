@@ -9,6 +9,68 @@ theorem contrapositive (p q : Prop) : (¬q → ¬p) ↔ (p → q) := by
   . exact λ h₁ => λ h₂ => byContradiction (λ h₃ => (h₁ h₃) h₂)
   . exact λ h₁ => λ h₂ => byContradiction (λ h₃ => h₂ (h₁ (not_not.mp h₃)))
 
+theorem de_morgan_1 (p q : Prop) : ¬(p ∨ q) ↔ (¬p ∧ ¬q) := by
+  cases em p with
+  | inl tp =>
+    apply Iff.intro
+    . intro h
+      have : p ∨ q := Or.inl tp
+      contradiction
+    . intro h
+      have := h.left
+      contradiction
+  | inr fp =>
+    cases em q with
+    | inl tq =>
+      apply Iff.intro
+      . intro h
+        have : p ∨ q := Or.inr tq
+        contradiction
+      . intro h
+        have _ := h.right
+        contradiction
+    | inr fq =>
+      apply Iff.intro
+      . intro
+        exact And.intro fp fq
+      . intro
+        apply Not.intro
+        intro h
+        cases h with
+        | inl tp => exact fp tp
+        | inr tq => exact fq tq
+
+theorem de_morgan_2 (p q : Prop) : ¬(p ∧ q) ↔ (¬p ∨ ¬q) := by
+  cases em p with
+  | inl tp =>
+    cases em q with
+    | inl tq =>
+      apply Iff.intro
+      . intro h
+        have _ := And.intro tp tq
+        contradiction
+      . intro h
+        have := by cases h with
+        | inl fp => exact fp tp
+        | inr fq => exact fq tq
+        contradiction
+    | inr fq =>
+      apply Iff.intro
+      . intro
+        exact Or.inr fq
+      . intro
+        apply Not.intro
+        intro h
+        exact fq h.right
+  | inr fp =>
+    apply Iff.intro
+    . intro
+      exact Or.inl fp
+    . intro
+      apply Not.intro
+      intro h
+      exact fp h.left
+
 /- --------------- -/
 /- Subset handling -/
 /- --------------- -/
@@ -97,8 +159,11 @@ def is_neutral (f : magma α) (e : α) : Prop :=
 def has_neutral (f : magma α) : Prop :=
   ∃ e : α, is_neutral α f e
 
+def has_inverse (f : magma α) (x : α) : Prop :=
+  ∃ y : α, is_neutral α f (f x y) ∧ is_neutral α f (f y x)
+
 def invertible (f : magma α) : Prop :=
-  ∀ x : α, ∃ y : α, is_neutral α f (f x y) ∧ is_neutral α f (f y x)
+  ∀ x : α, has_inverse α f x
 
 def commutative (f : magma α) : Prop :=
   ∀ x y : α, f x y = f y x
@@ -353,7 +418,7 @@ def is_euclidean_norm (g : nonzero α δ → Nat) : Prop :=
   )
 
 theorem invertibles_iff_least_degree (g : nonzero α δ → Nat) :
-is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y ≥ g x) ↔ (∃ x' : α, is_neutral α δ.val.val.ψ.val (x.val * x')) := by
+is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y ≥ g x) ↔ (has_inverse α δ.val.val.ψ.val x.val) := by
   intro h x
   apply δ.val.val.ψ.property.neu.elim
   intro one is_one
@@ -368,8 +433,12 @@ is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y
         apply Exists.elim ex
         intro x' eq
         apply Exists.intro x'
-        rw [←eq]
-        exact is_one
+        apply And.intro
+        . rw [←eq]
+          exact is_one
+        . rw [δ.val.val.ψ.property.com]
+          rw [←eq]
+          exact is_one
       . intro ex
         apply Exists.elim ex
         intro q hq
@@ -385,7 +454,7 @@ is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y
         x.val * (y.val * x') = (y.val * x') * x.val := by rw [δ.val.val.ψ.property.com]
         _ = y.val * (x' * x.val) := by rw [δ.val.val.ψ.property.ass]
         _ = y.val * (x.val * x') := by rw [δ.val.val.ψ.property.com x.val x']
-        _ = y.val := (hx' y.val).right
+        _ = y.val := (hx'.left y.val).right
       have inv_non_zero : ¬ is_neutral α δ.val.val.ϕ.val (y.val * x') := by
         apply byContradiction
         intro abs
@@ -420,13 +489,77 @@ is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y
         rw [all_zero v.val]
         exact is_zero
       contradiction
-    have r_is_true : ∃ x' : α, is_neutral α δ.val.val.ψ.val (x.val * x') := by
+    have r_is_true : has_inverse α δ.val.val.ψ.val x.val := by
       apply Exists.intro zero
-      rw [zero_absorbs_ψ]
-      rw [stupid]
-      repeat assumption
+      apply And.intro
+      . rw [zero_absorbs_ψ]
+        rw [stupid]
+        repeat assumption
+      . rw [δ.val.val.ψ.property.com]
+        rw [zero_absorbs_ψ]
+        rw [stupid]
+        repeat assumption
     apply Iff.intro
     . intro
       exact r_is_true
     . intro
       exact l_is_true
+
+structure is_universal_side_divisor (u : α) where
+  not_zero : ¬ is_neutral α δ.val.val.ϕ.val u
+  not_inv : ¬ has_inverse α δ.val.val.ψ.val u
+  usd_prop : ∀ x : α, ∃ q r : α, x = (u * q) + r ∧ (is_neutral α δ.val.val.ϕ.val r ∨ has_inverse α δ.val.val.ψ.val r)
+
+theorem ed_not_field_implies_having_usd (g : nonzero α δ → Nat) :
+is_euclidean_norm α δ g → (∃ x : α, ¬ is_neutral α δ.val.val.ϕ.val x ∧ ¬ has_inverse α δ.val.val.ψ.val x) → ∃ u : α, is_universal_side_divisor α δ u := by
+  intro norm good
+  let good_set : Set α := λ x => ¬ is_neutral α δ.val.val.ϕ.val x ∧ ¬ has_inverse α δ.val.val.ψ.val x
+  let g_rest : ↑good_set → Nat := λ x => g (Subtype.mk x.val x.property.left)
+  have has_min := function_to_the_naturals_has_min good_set g_rest (good.elim λ v => λ hv => Exists.intro (Subtype.mk v hv) trivial)
+  apply has_min.elim
+  intro u hu
+  apply Exists.intro u.val
+  apply is_universal_side_divisor.mk
+  . exact u.property.left
+  . exact u.property.right
+  . intro x
+    have euclidean_division := norm.right x (Subtype.mk u.val u.property.left)
+    cases euclidean_division with
+    | inl exa =>
+      apply exa.elim
+      intro q hq
+      apply Exists.intro q
+      apply δ.val.val.ϕ.property.neu.elim
+      intro r hr
+      apply Exists.intro r
+      apply And.intro
+      . rw [←hq]
+        rw [(hr x).right]
+      . apply Or.inl
+        exact hr
+    | inr rem =>
+      apply rem.elim
+      intro q hq
+      apply Exists.intro q
+      apply hq.elim
+      intro r hr
+      apply Exists.intro r.val
+      apply And.intro
+      . exact hr.left
+      . apply Or.inr
+        have r_not_good : ¬ good_set r.val := by
+          apply byContradiction
+          intro abs
+          rw [not_not] at abs
+          have _ := hu (Subtype.mk r.val abs)
+          have _ := Nat.not_le_of_gt hr.right
+          contradiction
+        rw [de_morgan_2] at r_not_good
+        cases r_not_good with
+        | inl is_neu =>
+          rw [not_not] at is_neu
+          have not_neu := r.property
+          contradiction
+        | inr is_inv =>
+          rw [not_not] at is_inv
+          exact is_inv
