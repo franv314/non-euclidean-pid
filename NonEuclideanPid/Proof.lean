@@ -1,115 +1,29 @@
+import Mathlib.Logic.Basic
+import Mathlib.Tactic
 import Paperproof
 set_option quotPrecheck false
-open Classical
 
 variable (α : Type)
-
-theorem contrapositive (p q : Prop) : (¬q → ¬p) ↔ (p → q) := by
-  apply Iff.intro
-  . exact λ h₁ => λ h₂ => byContradiction (λ h₃ => (h₁ h₃) h₂)
-  . exact λ h₁ => λ h₂ => byContradiction (λ h₃ => h₂ (h₁ (not_not.mp h₃)))
-
-theorem de_morgan_1 (p q : Prop) : ¬(p ∨ q) ↔ (¬p ∧ ¬q) := by
-  cases em p with
-  | inl tp =>
-    apply Iff.intro
-    . intro h
-      have : p ∨ q := Or.inl tp
-      contradiction
-    . intro h
-      have := h.left
-      contradiction
-  | inr fp =>
-    cases em q with
-    | inl tq =>
-      apply Iff.intro
-      . intro h
-        have : p ∨ q := Or.inr tq
-        contradiction
-      . intro h
-        have _ := h.right
-        contradiction
-    | inr fq =>
-      apply Iff.intro
-      . intro
-        exact And.intro fp fq
-      . intro
-        apply Not.intro
-        intro h
-        cases h with
-        | inl tp => exact fp tp
-        | inr tq => exact fq tq
-
-theorem de_morgan_2 (p q : Prop) : ¬(p ∧ q) ↔ (¬p ∨ ¬q) := by
-  cases em p with
-  | inl tp =>
-    cases em q with
-    | inl tq =>
-      apply Iff.intro
-      . intro h
-        have _ := And.intro tp tq
-        contradiction
-      . intro h
-        have := by cases h with
-        | inl fp => exact fp tp
-        | inr fq => exact fq tq
-        contradiction
-    | inr fq =>
-      apply Iff.intro
-      . intro
-        exact Or.inr fq
-      . intro
-        apply Not.intro
-        intro h
-        exact fq h.right
-  | inr fp =>
-    apply Iff.intro
-    . intro
-      exact Or.inl fp
-    . intro
-      apply Not.intro
-      intro h
-      exact fp h.left
 
 /- --------------- -/
 /- Subset handling -/
 /- --------------- -/
 
-def Set : Type :=
-  α -> Prop
-
-instance : CoeOut (Set α) Type :=
-  ⟨λ s => { x : α // s x }⟩
-
-def In (x : α) (σ : Set α) : Prop :=
-  σ x
-
-def not_In (x : α) (σ : Set α) : Prop :=
-  ¬ (In α x σ)
-
-infix:100 " ∈ " => In α
-infix:100 " ∉ " => not_In α
-infix:100 " ∈ₙ " => In Nat
-infix:100 " ∉ₙ " => not_In Nat
-
-theorem naturals_are_well_ordered (s : Set Nat) : (∃ _ : ↑s, True) → (∃ x : ↑s, ∀ y : ↑s, x.val ≤ y.val) := by
+theorem naturals_are_well_ordered (s : Set Nat) : (∃ _ : s, True) → (∃ x : s, ∀ y : s, x.val ≤ y.val) := by
   intro h
-  apply byContradiction
-  intro abs
-  have no_less_no_me : ∀ y : Nat, (∀ x : ↑s, y ≤ x) → y ∉ₙ s := by
+  by_contra abs
+  have no_less_no_me : ∀ y : Nat, (∀ x : s, y ≤ x) → y ∉ s := by
     intro y h₁
-    apply byContradiction
-    intro h₂
+    by_contra h₂
     apply abs
-    exact (Exists.intro (Subtype.mk y (not_not.mp h₂)) (λ z => h₁ z))
-  have nothing_in_s : ∀ x : Nat, x ∉ₙ s := by
+    exact (Exists.intro (Subtype.mk y  h₂) (λ z => h₁ z))
+  have nothing_in_s : ∀ x : Nat, x ∉ s := by
     intro x
     exact Nat.strongRecOn x (by
     intro n i
     apply no_less_no_me n
     intro x
-    apply byContradiction
-    intro abs
+    by_contra abs
     exact i x (Nat.lt_of_not_le abs) x.property)
   revert h
   apply Not.intro
@@ -120,16 +34,15 @@ theorem naturals_are_well_ordered (s : Set Nat) : (∃ _ : ↑s, True) → (∃ 
 
 theorem function_to_the_naturals_has_min (f : α → Nat) : (∃ _ : α, True) → (∃ x : α, ∀ y : α, f x ≤ f y) := by
   let im : Set Nat := λ n => ∃ a : α, f a = n -- SUS
-  let image : α → ↑im := λ x => Subtype.mk (f x) (Exists.intro x rfl) -- $S N S^(-1)$
+  let image : α → im := λ x => Subtype.mk (f x) (Exists.intro x rfl) -- $S N S^(-1)$
   intro h
   have im_has_min := by
     apply naturals_are_well_ordered im -- sus
     apply h.elim
     intro v _
     exact (Exists.intro (image v) trivial)
-  have preimage_exists : ∀ y : ↑im, ∃ x : α, f x = y := by
-    apply byContradiction
-    intro abs
+  have preimage_exists : ∀ y : im, ∃ x : α, f x = y := by
+    by_contra abs
     apply (not_forall.mp abs).elim
     intro v ha
     exact ha v.property
@@ -186,7 +99,7 @@ def abelian : Type :=
   { γ : magma α // abelian_structure α γ }
 
 def is_submagma (μ : magma α) (s : Set α) :=
-  ∀ x y : ↑s, (μ x y) ∈ s
+  ∀ x y : s, (μ x y) ∈ s
 
 def submagma (μ : magma α) : Type :=
   { s: Set α // is_submagma α μ s }
@@ -243,12 +156,12 @@ theorem zero_absorbs_ψ : ∀ x : α, is_neutral α ρ.val.ϕ.val x → ∀ y : 
     . exact ε
 
 def absorbs_ψ (σ : Set α) : Prop :=
-  ∀ s : ↑σ, ∀ r : α, (r *ᵣ s) ∈ σ ∧ (s *ᵣ r) ∈ σ
+  ∀ s : σ, ∀ r : α, (r *ᵣ s) ∈ σ ∧ (s *ᵣ r) ∈ σ
 
 structure is_ideal (α : Type) (ρ : ring α) (s : Set α) where
   subgroup : is_submagma α ρ.val.ϕ.val s
   absorbs : absorbs_ψ α ρ s
-  nonempty : ∃ _ : ↑s, True
+  nonempty : ∃ _ : s, True
 
 def is_generated_ideal (s : Set α) : Prop :=
   ∃ x: α, ∀ y : α, y ∈ s ↔ ∃ r : α, (r *ᵣ x) = y
@@ -282,7 +195,7 @@ theorem generated_ideal_absorbs_ψ (i : Set α) : is_generated_ideal α ρ i →
   . exact (h (y *ᵣ x)).mpr (Exists.intro (y *ᵣ r) ε₁.symm)
   . exact (h (x *ᵣ y)).mpr (Exists.intro (y *ᵣ r) ε₂.symm)
 
-theorem generated_ideal_is_nonempty (i : Set α) : is_generated_ideal α ρ i → ∃ _ : ↑i, True := by
+theorem generated_ideal_is_nonempty (i : Set α) : is_generated_ideal α ρ i → ∃ _ : i, True := by
   intro h
   apply h.elim
   intro γ η
@@ -324,20 +237,19 @@ def nonzero : Type :=
 
 theorem has_dedekind_hasse_norm_implies_pid (h : α → Nat) : is_dedekind_hasse_norm α δ h → is_principal_ideal_domain α δ := by
   intro dh_norm ideal is_id
-  let δ' : Type := { x : ↑ideal // ¬ is_neutral α δ.val.val.ϕ.val x }
-  apply (em (∃ _ : ↑δ', True)).elim
+  let δ' : Type := { x : ideal // ¬ is_neutral α δ.val.val.ϕ.val x }
+  apply (Classical.em (∃ _ : δ', True)).elim
   . intro ne
     have μ' : ∃ a : δ', ∀ b : δ', h b ≥ h a := function_to_the_naturals_has_min δ' (λ d => h d) ne
-    have μ'' : ∃ a : δ', ∀ b : ↑ideal, h b < h a → is_neutral α δ.val.val.ϕ.val b := by
+    have μ'' : ∃ a : δ', ∀ b : ideal, h b < h a → is_neutral α δ.val.val.ϕ.val b := by
       apply μ'.elim
       intro m η₁
       apply Exists.intro m
       intro v η₂
-      apply byContradiction
-      intro abs
+      by_contra abs
       have p := Nat.not_lt_of_ge (η₁ (Subtype.mk v abs))
       contradiction
-    have μ : ∃ a : ↑ideal, ∀ b : ↑ideal, h b < h a → is_neutral α δ.val.val.ϕ.val b := by
+    have μ : ∃ a : ideal, ∀ b : ideal, h b < h a → is_neutral α δ.val.val.ϕ.val b := by
       apply μ''.elim
       intro _ η
       apply Exists.intro
@@ -349,13 +261,12 @@ theorem has_dedekind_hasse_norm_implies_pid (h : α → Nat) : is_dedekind_hasse
     intro e
     apply Iff.intro
     . intro η
-      apply byContradiction
-      intro abs
+      by_contra abs
       apply ((dh_norm.right γ e) abs).elim
       intro s h₁
       apply h₁.elim
       intro t
-      have comb_gives_abs : ∀ el : ↑ideal, ¬ (h el ≠ 0 ∧ h el < h γ) := by
+      have comb_gives_abs : ∀ el : ideal, ¬ (h el ≠ 0 ∧ h el < h γ) := by
         intro el_abs abs
         exact abs.left ((dh_norm.left el_abs).mpr (hγ el_abs abs.right))
       have su_in_ideal := (is_id.absorbs γ s).left
@@ -372,11 +283,13 @@ theorem has_dedekind_hasse_norm_implies_pid (h : α → Nat) : is_dedekind_hasse
         rw [←h2]
         exact h1
       exact sub (is_id.absorbs γ x).left w
-  . intro em
-    have all_neutral : ∀ x : ↑ideal, is_neutral α δ.val.val.ϕ.val x := byContradiction (
-      λ abs => Exists.elim (not_forall.mp abs) (λ v => λ ha => (em (Exists.intro (Subtype.mk v ha) trivial))
-    ))
-    have all_equal : ∀ x y : ↑ideal, x.val = y.val := λ x => λ y => unique_neutral α δ.val.val.ϕ.val x y (And.intro (all_neutral x) (all_neutral y))
+  . intro Classical.em
+    have all_neutral : ∀ x : ideal, is_neutral α δ.val.val.ϕ.val x := by
+      by_contra abs
+      apply (not_forall.mp abs).elim
+      intro v ha
+      exact (Classical.em (Exists.intro (Subtype.mk v ha) trivial))
+    have all_equal : ∀ x y : ideal, x.val = y.val := λ x => λ y => unique_neutral α δ.val.val.ϕ.val x y (And.intro (all_neutral x) (all_neutral y))
     apply δ.val.val.ϕ.property.neu.elim
     intro z hz
     apply Exists.intro z
@@ -424,7 +337,7 @@ is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y
   intro one is_one
   apply δ.val.val.ϕ.property.neu.elim
   intro zero is_zero
-  cases em (zero ≠ one) with
+  cases Classical.em (zero ≠ one) with
   | inl non_stupid =>
     apply Iff.intro
     . intro η
@@ -456,9 +369,7 @@ is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y
         _ = y.val * (x.val * x') := by rw [δ.val.val.ψ.property.com x.val x']
         _ = y.val := (hx'.left y.val).right
       have inv_non_zero : ¬ is_neutral α δ.val.val.ϕ.val (y.val * x') := by
-        apply byContradiction
-        intro abs
-        rw [not_not] at abs
+        by_contra abs
         rw [←zero_absorbs_ψ α δ.val (y.val * x') abs x.val] at abs
         rw [inv_ex] at abs
         exact y.property abs
@@ -467,8 +378,7 @@ is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y
       exact inv_ex.symm
   | inr stupid =>
     have stupid : zero = one := by
-      apply byContradiction
-      intro abs
+      by_contra abs
       rw [←Ne.eq_1 zero one] at abs
       contradiction
     have all_zero : ∀ x : α, x = zero := by
@@ -479,8 +389,7 @@ is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y
         _ = x * zero := by rw [δ.val.val.ψ.property.com]
         _ = zero := zero_absorbs_ψ α δ.val zero is_zero x
     have l_is_true : ∀ (y : nonzero α δ), g y ≥ g x := by
-      apply byContradiction
-      intro abs
+      by_contra abs
       rw [not_forall] at abs
       apply abs.elim
       intro v _
@@ -514,7 +423,7 @@ theorem ed_not_field_implies_having_usd (g : nonzero α δ → Nat) :
 is_euclidean_norm α δ g → (∃ x : α, ¬ is_neutral α δ.val.val.ϕ.val x ∧ ¬ has_inverse α δ.val.val.ψ.val x) → ∃ u : α, is_universal_side_divisor α δ u := by
   intro norm good
   let good_set : Set α := λ x => ¬ is_neutral α δ.val.val.ϕ.val x ∧ ¬ has_inverse α δ.val.val.ψ.val x
-  let g_rest : ↑good_set → Nat := λ x => g (Subtype.mk x.val x.property.left)
+  let g_rest : good_set → Nat := λ x => g (Subtype.mk x.val x.property.left)
   have has_min := function_to_the_naturals_has_min good_set g_rest (good.elim λ v => λ hv => Exists.intro (Subtype.mk v hv) trivial)
   apply has_min.elim
   intro u hu
@@ -548,13 +457,11 @@ is_euclidean_norm α δ g → (∃ x : α, ¬ is_neutral α δ.val.val.ϕ.val x 
       . exact hr.left
       . apply Or.inr
         have r_not_good : ¬ good_set r.val := by
-          apply byContradiction
-          intro abs
-          rw [not_not] at abs
+          by_contra abs
           have _ := hu (Subtype.mk r.val abs)
           have _ := Nat.not_le_of_gt hr.right
           contradiction
-        rw [de_morgan_2] at r_not_good
+        rw [not_and_or] at r_not_good
         cases r_not_good with
         | inl is_neu =>
           rw [not_not] at is_neu
