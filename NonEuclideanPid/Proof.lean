@@ -1,3 +1,8 @@
+import Init.Data.Cast
+import Mathlib.Data.Int.ModEq
+import Mathlib.Data.Complex.Basic
+import Mathlib.Data.Real.Sqrt
+import Mathlib.Data.Set.Function
 import Mathlib.Logic.Basic
 import Mathlib.Tactic
 import Paperproof
@@ -9,15 +14,15 @@ variable (α : Type)
 /- Subset handling -/
 /- --------------- -/
 
-theorem naturals_are_well_ordered (s : Set Nat) : (∃ _ : s, True) → (∃ x : s, ∀ y : s, x.val ≤ y.val) := by
+theorem naturals_are_well_ordered (s : Set ℕ) : (∃ _ : s, True) → (∃ x : s, ∀ y : s, x.val ≤ y.val) := by
   intro h
   by_contra abs
-  have no_less_no_me : ∀ y : Nat, (∀ x : s, y ≤ x) → y ∉ s := by
+  have no_less_no_me : ∀ y : ℕ, (∀ x : s, y ≤ x) → y ∉ s := by
     intro y h₁
     by_contra h₂
     apply abs
     exact (Exists.intro (Subtype.mk y  h₂) (λ z => h₁ z))
-  have nothing_in_s : ∀ x : Nat, x ∉ s := by
+  have nothing_in_s : ∀ x : ℕ, x ∉ s := by
     intro x
     exact Nat.strongRecOn x (by
     intro n i
@@ -32,12 +37,12 @@ theorem naturals_are_well_ordered (s : Set Nat) : (∃ _ : s, True) → (∃ x :
   intro v _
   exact nothing_in_s v v.property
 
-theorem function_to_the_naturals_has_min (f : α → Nat) : (∃ _ : α, True) → (∃ x : α, ∀ y : α, f x ≤ f y) := by
-  let im : Set Nat := λ n => ∃ a : α, f a = n -- SUS
-  let image : α → im := λ x => Subtype.mk (f x) (Exists.intro x rfl) -- $S N S^(-1)$
+theorem function_to_the_naturals_has_min (f : α → ℕ) : (∃ _ : α, True) → (∃ x : α, ∀ y : α, f x ≤ f y) := by
+  let im : Set ℕ := λ n => ∃ a : α, f a = n
+  let image : α → im := λ x => Subtype.mk (f x) (Exists.intro x rfl)
   intro h
   have im_has_min := by
-    apply naturals_are_well_ordered im -- sus
+    apply naturals_are_well_ordered im
     apply h.elim
     intro v _
     exact (Exists.intro (image v) trivial)
@@ -166,7 +171,7 @@ structure is_ideal (α : Type) (ρ : ring α) (s : Set α) where
 def is_generated_ideal (s : Set α) : Prop :=
   ∃ x: α, ∀ y : α, y ∈ s ↔ ∃ r : α, (r *ᵣ x) = y
 
-theorem generated_ideal_is_additive_subgroup (i : Set α) : is_generated_ideal α ρ i → is_submagma α ρ.val.ϕ.val i := by
+lemma generated_ideal_is_additive_subgroup (i : Set α) : is_generated_ideal α ρ i → is_submagma α ρ.val.ϕ.val i := by
   intro g
   apply g.elim
   intro γ h x y
@@ -179,7 +184,7 @@ theorem generated_ideal_is_additive_subgroup (i : Set α) : is_generated_ideal �
     _ = (r₁ +ᵣ r₂) *ᵣ γ := by rw [ρ.property.right]
   exact (h (x +ᵣ y)).mpr (Exists.intro (r₁ +ᵣ r₂) ε.symm)
 
-theorem generated_ideal_absorbs_ψ (i : Set α) : is_generated_ideal α ρ i → absorbs_ψ α ρ i := by
+lemma generated_ideal_absorbs_ψ (i : Set α) : is_generated_ideal α ρ i → absorbs_ψ α ρ i := by
   intro g
   apply g.elim
   intro γ h x y
@@ -195,7 +200,7 @@ theorem generated_ideal_absorbs_ψ (i : Set α) : is_generated_ideal α ρ i →
   . exact (h (y *ᵣ x)).mpr (Exists.intro (y *ᵣ r) ε₁.symm)
   . exact (h (x *ᵣ y)).mpr (Exists.intro (y *ᵣ r) ε₂.symm)
 
-theorem generated_ideal_is_nonempty (i : Set α) : is_generated_ideal α ρ i → ∃ _ : i, True := by
+lemma generated_ideal_is_nonempty (i : Set α) : is_generated_ideal α ρ i → ∃ _ : i, True := by
   intro h
   apply h.elim
   intro γ η
@@ -225,7 +230,7 @@ def is_principal_ideal_domain : Prop :=
 def divides (x y : α) : Prop :=
   ∃ z : α, z * x = y
 
-def is_dedekind_hasse_norm (h : α → Nat) : Prop :=
+def is_dedekind_hasse_norm (h : α → ℕ) : Prop :=
   (∀ x : α, h x = 0 ↔ is_neutral α δ.val.val.ϕ.val x)
   ∧
   (∀ u v : α, (¬ divides α δ u v) → (∃ s t : α,
@@ -235,7 +240,7 @@ def is_dedekind_hasse_norm (h : α → Nat) : Prop :=
 def nonzero : Type :=
   { x : α // ¬ is_neutral α δ.val.val.ϕ.val x }
 
-theorem has_dedekind_hasse_norm_implies_pid (h : α → Nat) : is_dedekind_hasse_norm α δ h → is_principal_ideal_domain α δ := by
+theorem has_dedekind_hasse_norm_implies_pid (h : α → ℕ) : is_dedekind_hasse_norm α δ h → is_principal_ideal_domain α δ := by
   intro dh_norm ideal is_id
   let δ' : Type := { x : ideal // ¬ is_neutral α δ.val.val.ϕ.val x }
   apply (Classical.em (∃ _ : δ', True)).elim
@@ -318,7 +323,7 @@ theorem has_dedekind_hasse_norm_implies_pid (h : α → Nat) : is_dedekind_hasse
       rw [←hr]
       exact (is_id.absorbs (Subtype.mk z z₀) r).left
 
-def is_euclidean_norm (g : nonzero α δ → Nat) : Prop :=
+def is_euclidean_norm (g : nonzero α δ → ℕ) : Prop :=
   (
     ∀ z : nonzero α δ, ∀ x y : nonzero α δ, z.val = x.val * y.val → g z ≥ g x
   )
@@ -330,7 +335,7 @@ def is_euclidean_norm (g : nonzero α δ → Nat) : Prop :=
     (∃ q : α, ∃ r : nonzero α δ, a = (b.val * q) + r.val ∧ g r < g b)
   )
 
-theorem invertibles_iff_least_degree (g : nonzero α δ → Nat) :
+theorem invertibles_iff_least_degree (g : nonzero α δ → ℕ) :
 is_euclidean_norm α δ g → ∀ x : nonzero α δ, (∀ y : nonzero α δ, g y ≥ g x) ↔ (has_inverse α δ.val.val.ψ.val x.val) := by
   intro h x
   apply δ.val.val.ψ.property.neu.elim
@@ -419,11 +424,11 @@ structure is_universal_side_divisor (u : α) where
   not_inv : ¬ has_inverse α δ.val.val.ψ.val u
   usd_prop : ∀ x : α, ∃ q r : α, x = (u * q) + r ∧ (is_neutral α δ.val.val.ϕ.val r ∨ has_inverse α δ.val.val.ψ.val r)
 
-theorem ed_not_field_implies_having_usd (g : nonzero α δ → Nat) :
+theorem ed_not_field_implies_having_usd (g : nonzero α δ → ℕ) :
 is_euclidean_norm α δ g → (∃ x : α, ¬ is_neutral α δ.val.val.ϕ.val x ∧ ¬ has_inverse α δ.val.val.ψ.val x) → ∃ u : α, is_universal_side_divisor α δ u := by
   intro norm good
   let good_set : Set α := λ x => ¬ is_neutral α δ.val.val.ϕ.val x ∧ ¬ has_inverse α δ.val.val.ψ.val x
-  let g_rest : good_set → Nat := λ x => g (Subtype.mk x.val x.property.left)
+  let g_rest : good_set → ℕ := λ x => g (Subtype.mk x.val x.property.left)
   have has_min := function_to_the_naturals_has_min good_set g_rest (good.elim λ v => λ hv => Exists.intro (Subtype.mk v hv) trivial)
   apply has_min.elim
   intro u hu
@@ -470,3 +475,155 @@ is_euclidean_norm α δ g → (∃ x : α, ¬ is_neutral α δ.val.val.ϕ.val x 
         | inr is_inv =>
           rw [not_not] at is_inv
           exact is_inv
+
+def is_in_R (c : ℂ) : Prop :=
+  ∃ x y : ℤ, (c = Complex.mk ((Int.cast x) / 2) (√19 * (Int.cast y) / 2)) ∧ x ≡ y [ZMOD 2]
+
+def R : Type :=
+  { c : ℂ // is_in_R c }
+
+theorem R_closed_under_complex_addition (z₁ z₂ : ℂ) : is_in_R z₁ → is_in_R z₂ → is_in_R (z₁ + z₂) := by
+  intro h₁ h₂
+  apply h₁.elim
+  intro x₁ h₁'
+  apply h₁'.elim
+  intro y₁ h₁''
+  apply h₂.elim
+  intro x₂ h₂'
+  apply h₂'.elim
+  intro y₂ h₂''
+  apply Exists.intro (x₁ + x₂)
+  apply Exists.intro (y₁ + y₂)
+  apply And.intro
+  . rw [h₁''.left]
+    rw [h₂''.left]
+    apply Complex.ext
+    . simp [Complex.add_re]
+      ring_nf
+    . simp [Complex.add_im]
+      ring_nf
+  . have ε₁ := h₁''.right
+    have ε₂ := h₂''.right
+    exact Int.ModEq.add ε₁ ε₂
+
+lemma div_and_mul_by_two_on_even (x : ℤ) : x ≡ 0 [ZMOD 2] → 2 * (x / 2) = x := by
+  intro x_even
+  have th := Int.ediv_add_emod x 2
+  rw [x_even] at th
+  simp at th
+  exact th
+
+lemma division_by_two_exact_on_even (x : ℤ) : x ≡ 0 [ZMOD 2] → (x : ℝ) / 2 = ↑(x / 2) := by
+  intro x_even
+  let x' := x / 2
+  let xr := (x : ℝ) / 2
+  have two_xr_eq_x : 2 * xr = x := calc
+    2 * xr = 2 * (↑x / (2 : ℝ)) := by rfl
+    _ = 2 * (↑x * (2 : ℝ)⁻¹) := by rw [div_eq_mul_inv ↑x (2 : ℝ)]
+    _ = 2 * ((2 : ℝ)⁻¹ * ↑x) := by conv in ((2 : ℝ)⁻¹ * ↑x) => rw [mul_comm]
+    _ = x := by rw [←mul_assoc]; simp
+  have two_x'_eq_x : (2 * x' : ℝ) = (x : ℝ) := by
+    have th := div_and_mul_by_two_on_even x x_even
+    rify at th
+    exact th
+
+  calc
+    xr = (2⁻¹ * 2) * xr := by simp
+    _ = 2⁻¹ * (2 * xr) := by rw [mul_assoc]
+    _ = 2⁻¹ * (x : ℝ) := by rw [two_xr_eq_x]
+    _ = 2⁻¹ * (2 * x' : ℝ) := by rw [two_x'_eq_x]
+    _ = (2⁻¹ * 2) * (x' : ℝ) := by rw [←mul_assoc]
+    _ = x' := by simp
+
+theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : is_in_R z₁ → is_in_R z₂ → is_in_R (z₁ * z₂) := by
+  intro h₁ h₂
+  apply h₁.elim
+  intro x₁ h₁'
+  apply h₁'.elim
+  intro y₁ h₁''
+  apply h₂.elim
+  intro x₂ h₂'
+  apply h₂'.elim
+  intro y₂ h₂''
+
+  let x := x₁ * x₂ - (y₁ * y₂) * 19
+  let y := (x₁ * y₂) + (y₁ * x₂)
+
+  have x_even := calc
+    x₁ * x₂ - (y₁ * y₂) * 19 ≡ x₁ * x₂ - 19 * (y₁ * y₂) [ZMOD 2] := by conv in (19 * (y₁ * y₂)) => rw [mul_comm]
+    _ ≡ y₁ * y₂ - 19 * (y₁ * y₂) [ZMOD 2] := by
+      apply Int.ModEq.sub_right (19 * (y₁ * y₂))
+      exact Int.ModEq.mul h₁''.right h₂''.right
+    _ ≡ 1 * (y₁ * y₂) - 19 * (y₁ * y₂) [ZMOD 2] := by conv in (y₁ * y₂) => rw [←one_mul (y₁ * y₂)]
+    _ ≡ (-18) * (y₁ * y₂) [ZMOD 2] := by
+      rw [←mul_sub_right_distrib 1 19 (y₁ * y₂)]
+      simp
+    _ ≡ 0 * (y₁ * y₂) [ZMOD 2] := Int.ModEq.mul_right (y₁ * y₂) rfl
+    _ ≡ 0 [ZMOD 2] := by simp
+
+  have y_even := calc
+    (x₁ * y₂) + (y₁ * x₂) ≡ (x₁ * y₂) + (x₂ * y₁) [ZMOD 2] := by conv in (y₁ * x₂) => rw [mul_comm]
+    _ ≡ (x₁ * x₂) + (x₂ * x₁) [ZMOD 2] := by
+      apply Int.ModEq.add
+      . apply Int.ModEq.mul rfl h₂''.right.symm
+      . apply Int.ModEq.mul rfl h₁''.right.symm
+    _ ≡ (x₁ * x₂) + (x₁ * x₂) [ZMOD 2] := by rw [mul_comm]
+    _ ≡ (1 * (x₁ * x₂)) + (1 * (x₁ * x₂)) [ZMOD 2] := by rw [one_mul]
+    _ ≡ 2 * (x₁ * x₂) [ZMOD 2] := by
+      rw [←right_distrib 1 1 (x₁ * x₂)]
+      simp
+    _ ≡ 0 * (x₁ * x₂) [ZMOD 2] := Int.ModEq.mul_right (x₁ * x₂) rfl
+    _ ≡ 0 [ZMOD 2] := by simp
+
+  have eqx := division_by_two_exact_on_even x x_even
+  have eqy := division_by_two_exact_on_even y y_even
+
+  apply Exists.intro (x / 2)
+  apply Exists.intro (y / 2)
+  apply And.intro
+  . rw [h₁''.left]
+    rw [h₂''.left]
+    apply Complex.ext
+    . simp [Complex.mul_re]
+      ring_nf
+      simp
+      ring_nf
+      rw [←eqx]
+      ring_nf
+      rify
+      rw [mul_sub_right_distrib]
+      ring_nf
+    . simp [Complex.mul_im]
+      ring_nf
+      simp
+      rw [←eqy]
+      ring_nf
+      rify
+      rw [left_distrib (√19) (x₁ * y₂) (y₁ * x₂)]
+      rw [right_distrib (√19 * ((x₁ : ℝ) * (y₂ : ℝ))) (√19 * ((y₁ : ℝ) * (x₂ : ℝ))) (1 / 4)]
+      ring_nf
+  . have div4 : 4 ∣ (((x₁ * x₂) + (y₁ * y₂)) - ((x₁ * y₂) + (y₁ * x₂))) := by
+      apply (Int.ModEq.dvd h₁''.right).elim
+      intro n hn
+      apply (Int.ModEq.dvd h₂''.right).elim
+      intro m hm
+      apply Exists.intro (n * m)
+      calc
+        ((x₁ * x₂) + (y₁ * y₂)) - ((x₁ * y₂) + (y₁ * x₂)) = (y₁ - x₁) * (y₂ - x₂) := by ring_nf
+        _ = (2 * n) * (2 * m) := by rw [hn, hm]
+        _ = 4 * (n * m) := by ring_nf
+
+    have obv : -20 ≡ 0 [ZMOD 4] := rfl
+    have sub := Int.ModEq.mul_right (y₁ * y₂) obv
+    simp at sub
+
+    have eq : 2 * (x / 2) ≡ 2 * (y / 2) [ZMOD 4] := by
+      rw [div_and_mul_by_two_on_even x x_even]
+      rw [div_and_mul_by_two_on_even y y_even]
+      calc
+        x₁ * x₂ - (y₁ * y₂) * 19 = (-(20 * (y₁ * y₂))) + ((x₁ * x₂) + (y₁ * y₂)) := by ring_nf
+        _ ≡ 0 + ((x₁ * x₂) + (y₁ * y₂)) [ZMOD 4] := Int.ModEq.add sub rfl
+        _ ≡ (x₁ * x₂) + (y₁ * y₂) [ZMOD 4] := by simp
+        _ ≡ y [ZMOD 4] := (Int.modEq_of_dvd div4).symm
+
+    apply Int.ModEq.cancel_left_div_gcd (Int.sign_eq_one_iff_pos.mp rfl) eq
