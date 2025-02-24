@@ -627,3 +627,143 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : is_in_R z₁ �
         _ ≡ y [ZMOD 4] := (Int.modEq_of_dvd div4).symm
 
     apply Int.ModEq.cancel_left_div_gcd (Int.sign_eq_one_iff_pos.mp rfl) eq
+
+def r_ϕ (x y : R) : R :=
+  Subtype.mk (x.val + y.val) (R_closed_under_complex_addition x.val y.val x.property y.property)
+
+def r_ψ (x y : R) : R :=
+  Subtype.mk (x.val * y.val) (R_closed_under_complex_multiplication x.val y.val x.property y.property)
+
+def R_additive_group : abelian R := by
+  apply Subtype.mk r_ϕ
+  apply abelian_structure.mk
+  . intro x y z
+    apply Subtype.ext
+    calc
+      _ = (x.val + y.val) + z.val := rfl
+      _ = x.val + (y.val + z.val) := by ring
+      _ = (r_ϕ x (r_ϕ y z)).val := rfl
+  . let zero : R := by
+      apply Subtype.mk (0 : ℂ)
+      apply Exists.intro 0
+      apply Exists.intro 0
+      apply And.intro
+      . apply Complex.ext
+        . simp
+        . simp
+      . rfl
+    apply Exists.intro zero
+    intro v
+    apply And.intro
+    . apply Subtype.ext
+      calc
+        _ = zero.val + v.val := rfl
+        _ = v.val := by ring
+    . apply Subtype.ext
+      calc
+        _ = v.val + zero.val := rfl
+        _ = v.val := by ring
+  . intro x y
+    apply Subtype.ext
+    calc
+      _ = x.val + y.val := rfl
+      _ = y.val + x.val := by ring
+      _ = (r_ϕ y x).val := rfl
+  . intro x
+    let x' : R := by
+      apply Subtype.mk (-x.val)
+      apply (x.property).elim
+      intro n hn
+      apply hn.elim
+      intro m hm
+      apply Exists.intro (-n)
+      apply Exists.intro (-m)
+      apply And.intro
+      . apply Complex.ext
+        . simp [Complex.add_re]
+          rw [hm.left]
+          simp
+          ring
+        . simp [Complex.add_im]
+          rw [hm.left]
+          simp
+          ring
+      . simp
+        exact hm.right
+    apply Exists.intro x'
+    apply And.intro
+    . intro v
+      apply And.intro
+      . apply Subtype.ext
+        calc
+          (r_ϕ (r_ϕ x x') v).val = (x.val + x'.val) + v.val := rfl
+          _ = v.val := by ring
+      . apply Subtype.ext
+        calc
+          (r_ϕ v (r_ϕ x x')).val = v.val + (x.val + x'.val) := rfl
+          _ = v.val := by ring
+    . intro v
+      apply And.intro
+      . apply Subtype.ext
+        calc
+          (r_ϕ (r_ϕ x' x) v).val = (x'.val + x.val) + v.val := rfl
+          _ = v.val := by ring
+      . apply Subtype.ext
+        calc
+          (r_ϕ v (r_ϕ x' x)).val = v.val + (x'.val + x.val) := rfl
+          _ = v.val := by ring
+
+def R_multiplicative_group : comm_monoid R := by
+  apply Subtype.mk r_ψ
+  apply comm_monoid_structure.mk
+  . intro x y z
+    apply Subtype.ext
+    calc
+      _ = (x.val * y.val) * z.val := rfl
+      _ = x.val * (y.val * z.val) := by ring
+      _ = (r_ψ x (r_ψ y z)).val := rfl
+  . let one : R := by
+      apply Subtype.mk (1 : ℂ)
+      apply Exists.intro 2
+      apply Exists.intro 0
+      apply And.intro
+      . apply Complex.ext
+        . simp
+        . simp
+      . rfl
+    apply Exists.intro one
+    intro v
+    apply And.intro
+    . apply Subtype.ext
+      calc
+        _ = one.val * v.val := rfl
+        _ = v.val := by ring
+    . apply Subtype.ext
+      calc
+        _ = v.val * one.val := rfl
+        _ = v.val := by ring
+  . intro x y
+    apply Subtype.ext
+    calc
+      _ = x.val * y.val := rfl
+      _ = y.val * x.val := by ring
+      _ = (r_ψ y x).val := rfl
+
+def D₀ : prering R :=
+  prering.mk R_additive_group R_multiplicative_group
+
+theorem R_ϕ_distrib_R_ψ : distrib R D₀ := by
+  apply And.intro
+  . intro x y z
+    apply Subtype.ext
+    calc
+      _ = x.val * (y.val + z.val) := rfl
+      _ = (x.val * y.val) + (x.val * z.val) := by ring
+  . intro x y z
+    apply Subtype.ext
+    calc
+      _ = (y.val + z.val) * x.val := rfl
+      _ = (y.val * x.val) + (z.val * x.val) := by ring
+
+def D : ring R :=
+  Subtype.mk D₀ R_ϕ_distrib_R_ψ
