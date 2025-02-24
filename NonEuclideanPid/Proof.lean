@@ -7,71 +7,24 @@ import Paperproof
 
 variable (α : Type)
 
-theorem naturals_are_well_ordered (s : Set ℕ) : (∃ _ : s, True) → (∃ x : s, ∀ y : s, x.val ≤ y.val) := by
-  intro h
-  by_contra abs
-  have no_less_no_me : ∀ y : ℕ, (∀ x : s, y ≤ x) → y ∉ s := by
-    intro y h₁
-    by_contra h₂
-    apply abs
-    exact (Exists.intro (Subtype.mk y  h₂) (λ z => h₁ z))
-  have nothing_in_s : ∀ x : ℕ, x ∉ s := by
-    intro x
-    exact Nat.strongRecOn x (by
-    intro n i
-    apply no_less_no_me n
-    intro x
-    by_contra abs
-    exact i x (Nat.lt_of_not_le abs) x.property)
-  revert h
-  apply Not.intro
-  intro i
-  apply i.elim
-  intro v _
-  exact nothing_in_s v v.property
+class DedekindHasseDomain extends CommRing α, IsDomain α where
+  r : α → α → Prop
+  r_wellFounded : WellFounded r
+  linear_comb : ∀ u v: α, (u ∣ v) ∨ (∃ s t: α, r 0 (s * u + t * v) ∧ r (s * u + t * v) u)
 
-theorem function_to_the_naturals_has_min (f : α → ℕ) : (∃ _ : α, True) → (∃ x : α, ∀ y : α, f x ≤ f y) := by
-  let im : Set ℕ := λ n => ∃ a : α, f a = n
-  let image : α → im := λ x => Subtype.mk (f x) (Exists.intro x rfl)
-  intro h
-  have im_has_min := by
-    apply naturals_are_well_ordered im
-    apply h.elim
-    intro v _
-    exact (Exists.intro (image v) trivial)
-  have preimage_exists : ∀ y : im, ∃ x : α, f x = y := by
-    by_contra abs
-    apply (not_forall.mp abs).elim
-    intro v ha
-    exact ha v.property
-  apply im_has_min.elim
-  intro m η₁
-  apply (preimage_exists m).elim
-  intro n η₂
-  apply Exists.intro n
-  intro x
-  rw [η₂]
-  exact η₁ (image x)
-
-structure dedekind_hasse_norm [δ : CommRing α] [IsDomain α] (h : α → ℕ) where
-  zero_on_zero : ∀ x : α, h x = 0 ↔ x = 0
-  linear_comb : ∀ u v: α, (u ∣ v) ∨ (∃ s t: α, 0 < h (s * u + t * v) ∧ h (s * u + t * v) < h u)
-
-theorem dedekind_hasse_norm_implies_pid [δ : CommRing α] [IsDomain α] (h : α → ℕ) : dedekind_hasse_norm α h → IsPrincipalIdealRing α := by
-  intro is_dh_norm
+theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrincipalIdealRing α := by
   apply IsPrincipalIdealRing.mk
   intro ideal
   apply Submodule.IsPrincipal.mk
-  cases em (∃ x : ideal, x ≠ 0) with
+  cases em (∃ x : α, x ≠ 0 ∧ ideal.carrier x) with
   | inl normal =>
-    let non_zero : Set ideal := λ x => x ≠ 0
-    have ex_min_norm := by
-      apply function_to_the_naturals_has_min non_zero (Set.restrict non_zero (Set.restrict ideal.carrier h))
+    let non_zero : Set α := λ x => x ≠ 0 ∧ ideal.carrier x
+    have min_not_small := by
+      apply WellFounded.has_min (δ.r_wellFounded) non_zero
       apply normal.elim
-      intro e he
-      apply Exists.intro (Subtype.mk e he)
-      trivial
-    apply ex_min_norm.elim
+      intro v hv
+      exact Exists.intro v hv
+    apply min_not_small.elim
     intro γ hγ
     apply Exists.intro ↑↑γ
     apply Ideal.ext
@@ -88,7 +41,7 @@ theorem dedekind_hasse_norm_implies_pid [δ : CommRing α] [IsDomain α] (h : α
         rw [mul_comm]
         exact hκ.symm
       | inr abs =>
-        cases is_dh_norm.linear_comb γ v with
+        cases δ.linear_comb γ v with
         | inl =>
           contradiction
         | inr lin =>
@@ -96,26 +49,30 @@ theorem dedekind_hasse_norm_implies_pid [δ : CommRing α] [IsDomain α] (h : α
           intro s hs
           apply Exists.elim hs
           intro t ht
-          have lin_comb_ideal : s * ↑↑γ + t * v ∈ ideal := by
-            apply ideal.add_mem'
+          let lin_comb : non_zero := by
+            apply Subtype.mk (s * ↑↑γ + t * v)
+            apply And.intro
             . simp
-              exact ideal.smul_mem' s γ.val.property
-            . simp
-              exact ideal.smul_mem' t in_ideal
-          have lin_comb_not_null : (Subtype.mk (s * ↑↑γ + t * v) lin_comb_ideal) ≠ (Subtype.mk 0 ideal.zero_mem) := by
-            simp
-            apply not_imp_not.mpr (is_dh_norm.zero_on_zero (s * ↑↑γ + t * v)).mpr
-            exact ne_of_gt ht.left
-          let lin_comb : non_zero := Subtype.mk (Subtype.mk (s * ↑↑γ + t * v) lin_comb_ideal) (by exact lin_comb_not_null)
-          have lin_comb_has_big_norm : ¬ h (s * ↑↑γ + t * v) < h γ :=  not_lt.mpr (hγ lin_comb)
-          have lin_comb_has_small_norm := ht.right
+              by_contra abs
+              apply (WellFounded.wellFounded_iff_no_descending_seq.mp δ.r_wellFounded).false
+              apply Subtype.mk (λ _ => 0)
+              intro
+              conv in (occs := 2) 0 => rw [←abs]
+              exact ht.left
+            . apply ideal.add_mem'
+              . simp
+                exact ideal.smul_mem' s hγ.left.right
+              . simp
+                exact ideal.smul_mem' t in_ideal
+          have := ht.right
+          have := hγ.right lin_comb lin_comb.property
           contradiction
     . rw [Submodule.mem_span_singleton]
       intro in_span_γ
       apply in_span_γ.elim
       intro κ hκ
       rw [←hκ]
-      exact ideal.smul_mem' κ γ.val.property
+      exact ideal.smul_mem' κ hγ.left.right
   | inr stupid =>
     apply Exists.intro 0
     simp
@@ -126,8 +83,11 @@ theorem dedekind_hasse_norm_implies_pid [δ : CommRing α] [IsDomain α] (h : α
       apply Submodule.mem_span.mpr
       intro p hp
       have v_zero : v = 0 := by
-        apply (AddSubmonoid.mk_eq_zero ideal.toAddSubmonoid).mp
-        exact not_ne_iff.mp ((not_exists.mp stupid) (Subtype.mk v in_id))
+        by_contra abs
+        apply stupid
+        apply Exists.intro v
+        apply And.intro
+        repeat assumption
       rw [v_zero]
       simp
     . intro in_span_zero
