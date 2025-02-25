@@ -391,3 +391,30 @@ theorem sq_norm_is_integer_on_R (r : R) : ∃ n : ℕ, Complex.normSq r = n := b
   rw [←n_eq_nn]
   rw [hy.left]
   repeat (simp; ring_nf)
+
+def dh_rel_on_r (r₁ r₂ : R) : Prop :=
+  Complex.normSq r₁ < Complex.normSq r₂
+
+theorem dh_rel_on_r_well_founded : WellFounded dh_rel_on_r := by
+  apply WellFounded.wellFounded_iff_no_descending_seq.mpr
+  by_contra abs
+  simp at abs
+  apply abs.elim
+  intro f hf
+  let g : ℕ → ℕ := λ n => ⌊Complex.normSq (f n)⌋₊
+  have abs : ∀ n : ℕ, (g (n + 1)) < (g n) := by
+    intro n
+    have eq : ∀ n : ℕ, g n = Complex.normSq (f n) := by
+      intro x
+      apply (sq_norm_is_integer_on_R (f x)).elim
+      intro n hn
+      rw [hn]
+      simp
+      calc
+        ⌊Complex.normSq (f x)⌋₊ = ⌊(n : ℝ)⌋₊ := by rw [hn]
+        _ = n := by simp
+    rify
+    rw [eq n, eq (n + 1)]
+    exact hf n
+  apply (WellFounded.wellFounded_iff_no_descending_seq.mp (Nat.lt_wfRel.wf)).false
+  exact Subtype.mk g abs
