@@ -123,6 +123,41 @@ theorem euclidean_domain_has_usd [δ : EuclideanDomain α] : (small α)ᶜ.Nonem
 def R : Set ℂ :=
   λ c => ∃ x y : ℤ, (c = Complex.mk ((Int.cast x) / 2) (√19 * (Int.cast y) / 2)) ∧ x ≡ y [ZMOD 2]
 
+lemma div_and_mul_by_k_on_mult {k : ℤ} (x : ℤ) : x ≡ 0 [ZMOD k] → k * (x / k) = x := by
+  intro mult
+  have th := Int.ediv_add_emod x k
+  rw [mult] at th
+  simp at th
+  exact th
+
+lemma div_by_k_exact_on_mult {k : ℤ} (x : ℤ) : k ≠ 0 → x ≡ 0 [ZMOD k] → (x : ℝ) / k = ↑(x / k) := by
+  intro k_not_zero mult
+  rify at k_not_zero
+  let x' := x / k
+  let xr := (x : ℝ) / k
+
+  have two_xr_eq_x : k * xr = x := calc
+    k * xr = k * (↑x / (k : ℝ)) := by rfl
+    _ = k * (↑x * (k : ℝ)⁻¹) := by rw [div_eq_mul_inv ↑x (k : ℝ)]
+    _ = k * ((k : ℝ)⁻¹ * ↑x) := by conv in ((k : ℝ)⁻¹ * ↑x) => rw [mul_comm]
+    _ = k * (k : ℝ)⁻¹ * ↑x := by rw [←mul_assoc]
+    _ = x := by rw [Field.mul_inv_cancel (k : ℝ) k_not_zero]; simp
+
+  have two_x'_eq_x : (k * x' : ℝ) = (x : ℝ) := by
+    have th := div_and_mul_by_k_on_mult x mult
+    rify at th
+    exact th
+
+  calc
+    xr = (k * (k : ℝ)⁻¹) * xr := by rw [Field.mul_inv_cancel (k : ℝ) k_not_zero]; simp
+    _ = ((k : ℝ)⁻¹ * k) * xr := by conv in ((k : ℝ)⁻¹ * k) => rw [mul_comm]
+    _ = (k : ℝ)⁻¹ * (k * xr) := by rw [mul_assoc]
+    _ = (k : ℝ)⁻¹ * (x : ℝ) := by rw [two_xr_eq_x]
+    _ = (k : ℝ)⁻¹ * (k * x' : ℝ) := by rw [two_x'_eq_x]
+    _ = ((k : ℝ)⁻¹ * k) * (x' : ℝ) := by rw [←mul_assoc]
+    _ = (k * (k : ℝ)⁻¹) * (x' : ℝ) := by conv in ((k : ℝ)⁻¹ * k) => rw [mul_comm]
+    _ = x' := by rw [Field.mul_inv_cancel (k : ℝ) k_not_zero]; simp
+
 theorem R_closed_under_complex_addition (z₁ z₂ : ℂ) : R z₁ → R z₂ → R (z₁ + z₂) := by
   intro h₁ h₂
   apply h₁.elim
@@ -146,35 +181,6 @@ theorem R_closed_under_complex_addition (z₁ z₂ : ℂ) : R z₁ → R z₂ �
   . have ε₁ := h₁''.right
     have ε₂ := h₂''.right
     exact Int.ModEq.add ε₁ ε₂
-
-lemma div_and_mul_by_two_on_even (x : ℤ) : x ≡ 0 [ZMOD 2] → 2 * (x / 2) = x := by
-  intro x_even
-  have th := Int.ediv_add_emod x 2
-  rw [x_even] at th
-  simp at th
-  exact th
-
-lemma division_by_two_exact_on_even (x : ℤ) : x ≡ 0 [ZMOD 2] → (x : ℝ) / 2 = ↑(x / 2) := by
-  intro x_even
-  let x' := x / 2
-  let xr := (x : ℝ) / 2
-  have two_xr_eq_x : 2 * xr = x := calc
-    2 * xr = 2 * (↑x / (2 : ℝ)) := by rfl
-    _ = 2 * (↑x * (2 : ℝ)⁻¹) := by rw [div_eq_mul_inv ↑x (2 : ℝ)]
-    _ = 2 * ((2 : ℝ)⁻¹ * ↑x) := by conv in ((2 : ℝ)⁻¹ * ↑x) => rw [mul_comm]
-    _ = x := by rw [←mul_assoc]; simp
-  have two_x'_eq_x : (2 * x' : ℝ) = (x : ℝ) := by
-    have th := div_and_mul_by_two_on_even x x_even
-    rify at th
-    exact th
-
-  calc
-    xr = (2⁻¹ * 2) * xr := by simp
-    _ = 2⁻¹ * (2 * xr) := by rw [mul_assoc]
-    _ = 2⁻¹ * (x : ℝ) := by rw [two_xr_eq_x]
-    _ = 2⁻¹ * (2 * x' : ℝ) := by rw [two_x'_eq_x]
-    _ = (2⁻¹ * 2) * (x' : ℝ) := by rw [←mul_assoc]
-    _ = x' := by simp
 
 theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z₂ → R (z₁ * z₂) := by
   intro h₁ h₂
@@ -216,8 +222,8 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z
     _ ≡ 0 * (x₁ * x₂) [ZMOD 2] := Int.ModEq.mul_right (x₁ * x₂) rfl
     _ ≡ 0 [ZMOD 2] := by simp
 
-  have eqx := division_by_two_exact_on_even x x_even
-  have eqy := division_by_two_exact_on_even y y_even
+  have eqx := div_by_k_exact_on_mult x two_ne_zero x_even
+  have eqy := div_by_k_exact_on_mult y two_ne_zero y_even
 
   apply Exists.intro (x / 2)
   apply Exists.intro (y / 2)
@@ -259,8 +265,8 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z
     simp at sub
 
     have eq : 2 * (x / 2) ≡ 2 * (y / 2) [ZMOD 4] := by
-      rw [div_and_mul_by_two_on_even x x_even]
-      rw [div_and_mul_by_two_on_even y y_even]
+      rw [div_and_mul_by_k_on_mult x x_even]
+      rw [div_and_mul_by_k_on_mult y y_even]
       calc
         x₁ * x₂ - (y₁ * y₂) * 19 = (-(20 * (y₁ * y₂))) + ((x₁ * x₂) + (y₁ * y₂)) := by ring_nf
         _ ≡ 0 + ((x₁ * x₂) + (y₁ * y₂)) [ZMOD 4] := Int.ModEq.add sub rfl
@@ -322,3 +328,66 @@ def D : CommRing R_subring :=
 
 def D' : IsDomain R_subring :=
   Subring.instIsDomainSubtypeMem R_subring
+
+lemma sq_of_eq_mod_two_eq_mod_four {n m : ℤ} : n ≡ m [ZMOD 2] → n * n ≡ m * m [ZMOD 4] := by
+  intro h
+  rw [Int.modEq_iff_dvd] at h
+  rw [Int.modEq_iff_dvd]
+  apply h.elim
+  intro k hk
+  have eq : 2 * k + n = m := calc
+    2 * k + n = (m - n) + n := by rw [←hk]
+    _ = m := by simp
+  apply Exists.intro (k * k + k * n)
+  calc
+    m * m - n * n = (2 * k + n) * (2 * k + n) - n * n := by rw [eq]
+    _ = 4 * (k * k + k * n) := by ring
+
+lemma pos_eq_to_nat {n : ℤ} : 0 ≤ n → n = n.toNat := by
+  intro
+  cases n with
+  | ofNat n => simp
+  | negSucc n => contradiction
+
+theorem sq_norm_is_integer_on_R (r : R) : ∃ n : ℕ, Complex.normSq r = n := by
+  apply r.property.elim
+  intro x hx
+  apply hx.elim
+  intro y hy
+
+  let n := ((x * x + 19 * y * y) : ℝ) / 4
+  let nn := (x * x + 19 * y * y) / 4
+  let nn_nat := ((x * x + 19 * y * y) / 4).toNat
+
+  have n_eq_nn := by
+    apply div_by_k_exact_on_mult (x * x + 19 * y * y)
+    . exact four_ne_zero
+    . have eq : x * x ≡ y * y [ZMOD 4] := sq_of_eq_mod_two_eq_mod_four hy.right
+      calc
+        _ ≡ y * y + 19 * y * y [ZMOD 4] := Int.ModEq.add_right (19 * y * y) eq
+        _ = 20 * y * y := by ring
+        _ ≡ 0 [ZMOD 4] := by
+          rw [Int.modEq_iff_dvd]
+          simp
+          apply Exists.intro (5 * y * y)
+          ring
+
+  have nn_nat_eq_nn : nn = nn_nat := by
+    apply pos_eq_to_nat
+    apply Int.ediv_nonneg
+    . apply Int.add_nonneg
+      . exact mul_self_nonneg x
+      . rw [mul_assoc]
+        apply Int.mul_nonneg
+        . exact Int.le.intro_sub (19 + 0) rfl
+        . exact mul_self_nonneg y
+    . exact zero_le_four
+
+  rify at nn_nat_eq_nn
+  rify at n_eq_nn
+
+  apply Exists.intro nn_nat
+  rw [←nn_nat_eq_nn]
+  rw [←n_eq_nn]
+  rw [hy.left]
+  repeat (simp; ring_nf)
