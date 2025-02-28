@@ -580,7 +580,6 @@ lemma fract_not_zero_of_mod_not_zero (a b : ℤ) : b > 0 → ¬ a ≡ 0 [ZMOD b]
   push_cast
   have eq₀ : Int.euclideanDomain.quotient = (· / ·) := rfl
   have eq₁ : Int.euclideanDomain.remainder = (· % ·) := rfl
-  have eq₂ : Int.euclideanDomain.r = λ a b => a.natAbs < b.natAbs := rfl
   rw [eq₀, eq₁]
   simp
   rw [add_div, mul_comm, div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, div_self nzero_r]
