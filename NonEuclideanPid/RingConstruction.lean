@@ -203,8 +203,74 @@ def R_add_subgroup : AddSubgroup ℂ := by
 def R_subring : Subring ℂ :=
   Subring.mk' R R_submonoid R_add_subgroup rfl rfl
 
-instance CommRing_R : CommRing R :=
+instance : CommRing R :=
   Subring.toCommRing R_subring
 
-instance IsDomain_R : IsDomain R :=
+instance : IsDomain R :=
   Subring.instIsDomainSubtypeMem R_subring
+
+instance : Nontrivial R :=
+  nontrivial_of_ne 0 1 zero_ne_one
+
+lemma sq_of_eq_mod_two_eq_mod_four {n m : ℤ} : n ≡ m [ZMOD 2] → n * n ≡ m * m [ZMOD 4] := by
+  intro h
+  rw [Int.modEq_iff_dvd] at h
+  rw [Int.modEq_iff_dvd]
+  apply h.elim
+  intro k hk
+  have eq : 2 * k + n = m := calc
+    2 * k + n = (m - n) + n := by rw [←hk]
+    _ = m := by simp
+  apply Exists.intro (k * k + k * n)
+  calc
+    m * m - n * n = (2 * k + n) * (2 * k + n) - n * n := by rw [eq]
+    _ = 4 * (k * k + k * n) := by ring
+
+lemma pos_eq_to_nat {n : ℤ} : 0 ≤ n → n = n.toNat := by
+  intro
+  cases n with
+  | ofNat n => simp
+  | negSucc n => contradiction
+
+theorem sq_norm_is_integer_on_R (r : R) : ∃ n : ℕ, Complex.normSq r = n := by
+  apply r.property.elim
+  intro x hx
+  apply hx.elim
+  intro y hy
+
+  let n := ((x * x + 19 * y * y) : ℝ) / 4
+  let nn := (x * x + 19 * y * y) / 4
+  let nn_nat := ((x * x + 19 * y * y) / 4).toNat
+
+  have n_eq_nn := by
+    apply div_by_k_exact_on_mult (x * x + 19 * y * y)
+    . exact four_ne_zero
+    . have eq : x * x ≡ y * y [ZMOD 4] := sq_of_eq_mod_two_eq_mod_four hy.right
+      calc
+        _ ≡ y * y + 19 * y * y [ZMOD 4] := Int.ModEq.add_right (19 * y * y) eq
+        _ = 20 * y * y := by ring
+        _ ≡ 0 [ZMOD 4] := by
+          rw [Int.modEq_iff_dvd]
+          simp
+          apply Exists.intro (5 * y * y)
+          ring
+
+  have nn_nat_eq_nn : nn = nn_nat := by
+    apply pos_eq_to_nat
+    apply Int.ediv_nonneg
+    . apply Int.add_nonneg
+      . exact mul_self_nonneg x
+      . rw [mul_assoc]
+        apply Int.mul_nonneg
+        . exact Int.le.intro_sub (19 + 0) rfl
+        . exact mul_self_nonneg y
+    . exact zero_le_four
+
+  rify at nn_nat_eq_nn
+  rify at n_eq_nn
+
+  apply Exists.intro nn_nat
+  rw [←nn_nat_eq_nn]
+  rw [←n_eq_nn]
+  rw [hy.left]
+  repeat (simp; ring_nf)

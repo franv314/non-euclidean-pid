@@ -8,4 +8,4 @@ A work-in-progress proof that $R = \mathbb{Z}[(1+i\sqrt{19})/2]$ is a PID but no
 - [X] Proving that having a Dedekind-Hasse norm implies being a Principal Ideal Domain
 - [X] Proving that $R$ is an integral domain
 - [X] Proving that $R$ has a  Dedekind-Hasse norm
-- [ ] Proving that $R$ has no universal side divisor
+- [X] Proving that $R$ has no universal side divisor

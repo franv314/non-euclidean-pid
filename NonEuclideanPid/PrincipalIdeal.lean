@@ -1,6 +1,6 @@
 import NonEuclideanPid.RingConstruction
 
-variable (α : Type)
+variable (α : Type u)
 
 class DedekindHasseDomain extends CommRing α, IsDomain α where
   r : α → α → Prop
@@ -16,12 +16,9 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
     let non_zero : Set α := λ x => x ≠ 0 ∧ ideal.carrier x
     have min_not_small := by
       apply WellFounded.has_min (δ.r_wellFounded) non_zero
-      apply normal.elim
-      intro v hv
-      exact Exists.intro v hv
-    apply min_not_small.elim
+      exact normal
+    apply min_not_small.imp
     intro γ hγ
-    apply Exists.intro ↑↑γ
     apply Ideal.ext
     intro v
     apply Iff.intro
@@ -29,17 +26,16 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
       cases em (↑↑γ ∣ v) with
       | inl div =>
         rw [Submodule.mem_span_singleton]
-        apply Exists.elim div
+        apply div.imp
         intro κ hκ
-        apply Exists.intro κ
         simp
         rw [mul_comm]
         exact hκ.symm
       | inr abs =>
           have lin := δ.linear_comb _ _ hγ.left.left abs
-          apply Exists.elim lin
+          apply lin.elim
           intro s hs
-          apply Exists.elim hs
+          apply hs.elim
           intro t ht
           let lin_comb : non_zero := by
             apply Subtype.mk (s * ↑↑γ + t * v)
@@ -85,69 +81,6 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
     . intro in_span_zero
       rw [eq_zero_of_zero_dvd (Ideal.mem_span_singleton.mp in_span_zero)]
       exact ideal.zero_mem
-
-lemma sq_of_eq_mod_two_eq_mod_four {n m : ℤ} : n ≡ m [ZMOD 2] → n * n ≡ m * m [ZMOD 4] := by
-  intro h
-  rw [Int.modEq_iff_dvd] at h
-  rw [Int.modEq_iff_dvd]
-  apply h.elim
-  intro k hk
-  have eq : 2 * k + n = m := calc
-    2 * k + n = (m - n) + n := by rw [←hk]
-    _ = m := by simp
-  apply Exists.intro (k * k + k * n)
-  calc
-    m * m - n * n = (2 * k + n) * (2 * k + n) - n * n := by rw [eq]
-    _ = 4 * (k * k + k * n) := by ring
-
-lemma pos_eq_to_nat {n : ℤ} : 0 ≤ n → n = n.toNat := by
-  intro
-  cases n with
-  | ofNat n => simp
-  | negSucc n => contradiction
-
-theorem sq_norm_is_integer_on_R (r : R) : ∃ n : ℕ, Complex.normSq r = n := by
-  apply r.property.elim
-  intro x hx
-  apply hx.elim
-  intro y hy
-
-  let n := ((x * x + 19 * y * y) : ℝ) / 4
-  let nn := (x * x + 19 * y * y) / 4
-  let nn_nat := ((x * x + 19 * y * y) / 4).toNat
-
-  have n_eq_nn := by
-    apply div_by_k_exact_on_mult (x * x + 19 * y * y)
-    . exact four_ne_zero
-    . have eq : x * x ≡ y * y [ZMOD 4] := sq_of_eq_mod_two_eq_mod_four hy.right
-      calc
-        _ ≡ y * y + 19 * y * y [ZMOD 4] := Int.ModEq.add_right (19 * y * y) eq
-        _ = 20 * y * y := by ring
-        _ ≡ 0 [ZMOD 4] := by
-          rw [Int.modEq_iff_dvd]
-          simp
-          apply Exists.intro (5 * y * y)
-          ring
-
-  have nn_nat_eq_nn : nn = nn_nat := by
-    apply pos_eq_to_nat
-    apply Int.ediv_nonneg
-    . apply Int.add_nonneg
-      . exact mul_self_nonneg x
-      . rw [mul_assoc]
-        apply Int.mul_nonneg
-        . exact Int.le.intro_sub (19 + 0) rfl
-        . exact mul_self_nonneg y
-    . exact zero_le_four
-
-  rify at nn_nat_eq_nn
-  rify at n_eq_nn
-
-  apply Exists.intro nn_nat
-  rw [←nn_nat_eq_nn]
-  rw [←n_eq_nn]
-  rw [hy.left]
-  repeat (simp; ring_nf)
 
 @[simp]
 def dh_rel_on_r (r₁ r₂ : R) : Prop :=
@@ -308,9 +241,8 @@ lemma real_part (x : ℝ) : ∀ k : ℤ, ∃ l : ℤ, l ≡ k [ZMOD 2] ∧ |x - 
       exact hl
   cases Int.emod_two_eq_zero_or_one k with
   | inl zero =>
-    apply (th x).elim
+    apply (th x).imp
     intro k hk
-    apply Exists.intro k
     apply And.intro
     . calc
         k ≡ 0 [ZMOD 2] := hk.left
@@ -493,9 +425,6 @@ theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
     have in_strip : ∃ k : ℤ, k * (√19 / 2) + √3 / 2 ≤ (v.val / u).im ∧ (v.val / u).im ≤ (k + 1) * (√19 / 2) - √3 / 2 := by
       let k := ⌊(v.val / u).im / (√19 / 2)⌋
       apply Exists.intro k
-      have not_strip := (not_exists.mp not_in_strip) k
-      rw [not_and_or] at not_strip
-      simp at not_strip
       apply And.intro
       . by_contra abs
         simp at abs
@@ -546,9 +475,8 @@ theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
           rw [←mul_assoc, ←div_eq_mul_inv] at ub
           exact ub
     have in_strip' : ∃ k : ℤ, k * √19 + √3 ≤ (2 * v.val / u).im ∧ (2 * v.val / u).im ≤ (k + 1) * √19 - √3 := by
-      apply in_strip.elim
+      apply in_strip.imp
       intro k hk
-      apply Exists.intro k
       apply And.intro
       . have th : (k * (√19 / 2) + √3 / 2) * 2 ≤ ((v.val / u).im) * 2 := by
           apply (mul_le_mul_iff_of_pos_right zero_lt_two).mpr
@@ -590,9 +518,8 @@ theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
       rify at diseq
       exact diseq
     have in_strip''' : ∃ k : ℤ, k * √19 / 2 - √3 / 2 < (2 * v.val / u).im ∧ (2 * v.val / u).im < k * √19 / 2 + √3 / 2 := by
-      apply in_strip''.elim
+      apply in_strip''.imp
       intro k hk
-      apply Exists.intro k
       apply And.intro
       . apply gt_of_ge_of_gt
         . exact hk.left
