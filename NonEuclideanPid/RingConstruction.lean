@@ -11,7 +11,7 @@ lemma div_and_mul_by_k_on_mult {k : ℤ} (x : ℤ) : x ≡ 0 [ZMOD k] → k * (x
   intro mult
   have th := Int.ediv_add_emod x k
   rw [mult] at th
-  simp at th
+  simp only [EuclideanDomain.zero_mod, add_zero] at th
   exact th
 
 lemma div_by_k_exact_on_mult {k : ℤ} (x : ℤ) : k ≠ 0 → x ≡ 0 [ZMOD k] → (x : ℝ) / k = ↑(x / k) := by
@@ -58,9 +58,8 @@ theorem R_closed_under_complex_addition (z₁ z₂ : ℂ) : R z₁ → R z₂ �
   . rw [h₁''.left]
     rw [h₂''.left]
     apply Complex.ext
-    . simp
-      ring_nf
-    . simp
+    repeat
+      simp only [Complex.add_re, Complex.add_im, Int.cast_add]
       ring_nf
   . exact Int.ModEq.add h₁''.right h₂''.right
 
@@ -113,18 +112,18 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z
   . rw [h₁''.left]
     rw [h₂''.left]
     apply Complex.ext
-    . simp [Complex.mul_re]
+    . rw [Complex.mul_re]
       ring_nf
-      simp
+      simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt]
       ring_nf
       rw [←eqx]
       ring_nf
       rify
       rw [mul_sub_right_distrib]
       ring_nf
-    . simp [Complex.mul_im]
+    . rw [Complex.mul_im]
       ring_nf
-      simp
+      simp only [one_div]
       rw [←eqy]
       ring_nf
       rify
@@ -143,7 +142,7 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z
 
     have obv : -20 ≡ 0 [ZMOD 4] := rfl
     have sub := Int.ModEq.mul_right (y₁ * y₂) obv
-    simp at sub
+    simp only [Int.reduceNeg, neg_mul, zero_mul] at sub
 
     have eq : 2 * (x / 2) ≡ 2 * (y / 2) [ZMOD 4] := by
       rw [div_and_mul_by_k_on_mult x x_even]
@@ -166,7 +165,7 @@ def R_submonoid : Submonoid ℂ := by
   apply Exists.intro 2
   apply Exists.intro 0
   apply And.intro
-  . simp
+  . simp only [Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, div_self, Int.cast_zero, mul_zero, zero_div]
     rfl
   . rfl
 
@@ -180,7 +179,7 @@ def R_add_submonoid : AddSubmonoid ℂ := by
   apply Exists.intro 0
   apply Exists.intro 0
   apply And.intro
-  . simp
+  . simp only [Int.cast_zero, zero_div, mul_zero]
     rfl
   . rfl
 
@@ -197,7 +196,7 @@ def R_add_subgroup : AddSubgroup ℂ := by
   . rw [hm.left]
     apply Complex.ext
     repeat field_simp
-  . simp
+  . rw [Int.neg_modEq_neg]
     exact hm.right
 
 def R_subring : Subring ℂ :=
@@ -250,8 +249,7 @@ theorem sq_norm_is_integer_on_R (r : R) : ∃ n : ℕ, Complex.normSq r = n := b
         _ ≡ y * y + 19 * y * y [ZMOD 4] := Int.ModEq.add_right (19 * y * y) eq
         _ = 20 * y * y := by ring
         _ ≡ 0 [ZMOD 4] := by
-          rw [Int.modEq_iff_dvd]
-          simp
+          rw [Int.modEq_iff_dvd, zero_sub, dvd_neg]
           apply Exists.intro (5 * y * y)
           ring
 
@@ -270,7 +268,7 @@ theorem sq_norm_is_integer_on_R (r : R) : ∃ n : ℕ, Complex.normSq r = n := b
   rify at n_eq_nn
 
   apply Exists.intro nn_nat
-  rw [←nn_nat_eq_nn]
-  rw [←n_eq_nn]
-  rw [hy.left]
-  repeat (simp; ring_nf)
+  rw [←nn_nat_eq_nn, ←n_eq_nn, hy.left, Complex.normSq_mk]
+  ring_nf
+  simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt, add_right_inj]
+  ring_nf
