@@ -323,8 +323,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
           simp only [Int.reduceNeg, Int.cast_neg, Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, neg_div_self] at hm
           apply Or.inr; apply Or.inr; apply Or.inl
           ext
-          rw [Subring.coe_neg R_subring, Subring.coe_one R_subring]
-          rw [hm.left]
+          rw [Subring.coe_neg R_subring, Subring.coe_one R_subring, hm.left]
           apply Complex.ext
           repeat simp
       | inr other =>
@@ -347,8 +346,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
             have eq : (1 : R) + (1 : R) = (2 : R) := one_add_one_eq_two
             rw [←eq]
             ext
-            rw [Subring.coe_add R_subring, Subring.coe_one R_subring]
-            rw [hm.left]
+            rw [Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
             apply Complex.ext
             . ring_nf
               rfl
@@ -360,8 +358,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
             have eq : (1 : R) + (1 : R) = (2 : R) := one_add_one_eq_two
             rw [←eq]
             ext
-            rw [Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring]
-            rw [hm.left]
+            rw [Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
             apply Complex.ext
             . ring_nf
               rfl
@@ -450,6 +447,7 @@ lemma norm_5_9_norm {x : norm_5_9} : Complex.normSq x ≤ 9 := by
                     repeat (simp only [norm_9_p, Complex.normSq_mk, mul_neg, neg_mul, neg_neg, mul_zero, add_zero, ge_iff_le, le_refl]; ring_nf)
                     linarith
 
+@[simp]
 lemma norm_0_1_card : Nat.card norm_0_1 = 3 := by
   rw [norm_0_1, Set.Nat.card_coe_set_eq]
   simp only [Set.mem_insert_iff, zero_ne_one, Set.mem_singleton_iff, zero_eq_neg, one_ne_zero, or_self, not_false_eq_true, Set.finite_singleton, Set.Finite.insert, Set.ncard_insert_of_not_mem, Nat.reduceEqDiff]
@@ -464,8 +462,7 @@ lemma neg_neq {a : ℝ} : a ≠ 0 → a ≠ -a := by
   norm_cast
 
 lemma norm_5_9_card : Nat.card norm_5_9 = 10 := by
-  rw [norm_5_9]
-  rw [Set.Nat.card_coe_set_eq]
+  rw [norm_5_9, Set.Nat.card_coe_set_eq]
 
   have ne₀ : ¬√19 = -√19 ↔ True := Iff.intro (λ _ => trivial) (λ _ => neg_neq (Real.sqrt_ne_zero'.mpr Nat.ofNat_pos'))
   have ne₁ : (1 : ℝ) = -1 ↔ False := Iff.intro (by norm_cast) False.elim
@@ -473,117 +470,21 @@ lemma norm_5_9_card : Nat.card norm_5_9 = 10 := by
   have ne₃ : (-1 : ℝ) = 3 ↔ False := Iff.intro (by norm_cast) False.elim
   have ne₄ : (3 : ℝ) = -3 ↔ False := Iff.intro (by norm_cast) False.elim
 
-  have ne : norm_5_pp ∉ ({
-    norm_5_pm, norm_5_mp, norm_5_mm,
-    norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm,
-    norm_9_m, norm_9_p
-  } : Set R) := by
-    simp only [norm_5_pm, one_div, norm_5_mp, norm_5_mm, norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm,
-      norm_9_m, norm_9_p, norm_5_pp, Set.mem_insert_iff, Subtype.mk.injEq, Complex.mk.injEq,
-      true_and, and_true, div_eq_zero_iff, Nat.ofNat_nonneg, Real.sqrt_eq_zero, OfNat.ofNat_ne_zero,
-      or_self, and_false, Set.mem_singleton_iff, or_false, not_or, not_and]
-    field_simp
-    rw [ne₀, ne₁, ne₂]
-    simp only [not_false_eq_true, implies_true, and_self]
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_5_pm ∉ ({
-    norm_5_mp, norm_5_mm,
-    norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm,
-    norm_9_m, norm_9_p
-  } : Set R) := by
-    simp only [norm_5_mp, norm_5_mm, norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm, norm_9_m, norm_9_p,
-      norm_5_pm, one_div, Set.mem_insert_iff, Subtype.mk.injEq, Complex.mk.injEq, and_true,
-      div_eq_zero_iff, neg_eq_zero, Nat.ofNat_nonneg, Real.sqrt_eq_zero, OfNat.ofNat_ne_zero,
-      or_self, and_false, Set.mem_singleton_iff, or_false, not_or, not_and]
-    field_simp
-    rw [ne₁, ne₂]
-    simp only [IsEmpty.forall_iff, not_false_eq_true, and_self]
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_5_mp ∉ ({
-    norm_5_mm,
-    norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm,
-    norm_9_m, norm_9_p
-  } : Set R) := by
-    simp only [norm_5_mm, norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm, norm_9_m, norm_9_p, norm_5_mp,
-      Set.mem_insert_iff, Subtype.mk.injEq, Complex.mk.injEq, true_and, and_true, div_eq_zero_iff,
-      Nat.ofNat_nonneg, Real.sqrt_eq_zero, OfNat.ofNat_ne_zero, or_self, and_false,
-      Set.mem_singleton_iff, or_false, not_or, not_and]
-    field_simp
-    rw [ne₀, ne₃]
-    simp only [not_false_eq_true, implies_true, and_self]
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_5_mm ∉ ({
-    norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm,
-    norm_9_m, norm_9_p
-  } : Set R) := by
-    simp only [norm_7_pp, norm_7_pm, norm_7_mp, norm_7_mm, norm_9_m, norm_9_p, norm_5_mm,
-      Set.mem_insert_iff, Subtype.mk.injEq, Complex.mk.injEq, and_true, div_eq_zero_iff,
-      neg_eq_zero, Nat.ofNat_nonneg, Real.sqrt_eq_zero, OfNat.ofNat_ne_zero, or_self, and_false,
-      Set.mem_singleton_iff, or_false, not_or, not_and]
-    field_simp
-    rw [ne₃]
-    simp only [IsEmpty.forall_iff, not_false_eq_true, and_self]
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_7_pp ∉ ({
-    norm_7_pm, norm_7_mp, norm_7_mm,
-    norm_9_m, norm_9_p
-  } : Set R) := by
-    simp only [norm_7_pm, norm_7_mp, norm_7_mm, norm_9_m, norm_9_p, norm_7_pp, Set.mem_insert_iff,
-      Subtype.mk.injEq, Complex.mk.injEq, true_and, and_true, div_eq_zero_iff, Nat.ofNat_nonneg,
-      Real.sqrt_eq_zero, OfNat.ofNat_ne_zero, or_self, and_false, Set.mem_singleton_iff, or_false,
-      not_or, not_and]
-    field_simp
-    rw [ne₀, ne₄]
-    simp only [not_false_eq_true, implies_true, and_self]
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_7_pm ∉ ({
-    norm_7_mp, norm_7_mm,
-    norm_9_m, norm_9_p
-  } : Set R) := by
-    simp only [norm_7_mp, norm_7_mm, norm_9_m, norm_9_p, norm_7_pm, Set.mem_insert_iff,
-      Subtype.mk.injEq, Complex.mk.injEq, and_true, div_eq_zero_iff, neg_eq_zero, Nat.ofNat_nonneg,
-      Real.sqrt_eq_zero, OfNat.ofNat_ne_zero, or_self, and_false, Set.mem_singleton_iff, or_false,
-      not_or, not_and]
-    field_simp
-    rw [ne₄]
-    simp only [IsEmpty.forall_iff, not_false_eq_true, and_self]
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_7_mp ∉ ({
-    norm_7_mm,
-    norm_9_m, norm_9_p
-  } : Set R) := by
-    simp only [norm_7_mm, norm_9_m, norm_9_p, norm_7_mp, Set.mem_insert_iff, Subtype.mk.injEq,
-      Complex.mk.injEq, true_and, div_eq_zero_iff, Nat.ofNat_nonneg, Real.sqrt_eq_zero,
-      OfNat.ofNat_ne_zero, or_self, and_false, Set.mem_singleton_iff, or_false]
-    field_simp
-    rw [ne₀]
-    simp only
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_7_mm ∉ ({norm_9_m, norm_9_p} : Set R) := by
-    simp only [norm_9_m, norm_9_p, norm_7_mm, Set.mem_insert_iff, Subtype.mk.injEq,
-      Complex.mk.injEq, div_eq_zero_iff, neg_eq_zero, Nat.ofNat_nonneg, Real.sqrt_eq_zero,
-      OfNat.ofNat_ne_zero, or_self, and_false, Set.mem_singleton_iff, not_false_eq_true]
-  rw [Set.ncard_insert_of_not_mem ne]
-
-  have ne : norm_9_m ∉ ({norm_9_p} : Set R) := by
-    simp only [norm_9_p, norm_9_m, Set.mem_singleton_iff, Subtype.mk.injEq, Complex.mk.injEq, and_true]
-    rw [eq_comm, ne₄]
-    simp only [not_false_eq_true]
-  rw [Set.ncard_insert_of_not_mem ne]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₁, ne₂])]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₁, ne₂])]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₃])]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₃])]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₄])]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₄])]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀])]
+  rw [Set.ncard_insert_of_not_mem (by field_simp)]
+  rw [Set.ncard_insert_of_not_mem (by field_simp [eq_comm, ne₄])]
 
   simp
 
 instance : Finite norm_0_1 := by
   apply Nat.finite_of_card_ne_zero
-  rw [norm_0_1_card]
-  trivial
+  simp
 
 theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
   apply not_exists.mpr
@@ -776,7 +677,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
         exact eq₂
       apply f.elim
       intro f inj
-      have card_domain : Nat.card (norm_0_1 × norm_0_1) = 9 := by rw [Nat.card_prod, norm_0_1_card]
+      have card_domain : Nat.card (norm_0_1 × norm_0_1) = 9 := by simp
       have con := Nat.card_le_card_of_injective f inj
       rw [card_domain, norm_5_9_card] at con
       linarith
