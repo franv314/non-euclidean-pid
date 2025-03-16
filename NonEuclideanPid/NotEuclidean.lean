@@ -28,19 +28,17 @@ def is_universal_side_divisor (u : α) :=
 theorem euclidean_domain_has_usd (ed : Euclidean α) : (small α)ᶜ.Nonempty → ∃ u : α, is_universal_side_divisor α u := by
   intro has_not_small
   have min_not_small := WellFounded.has_min (ed.r_well_founded) (small α)ᶜ has_not_small
-  apply min_not_small.elim
+  apply min_not_small.imp
   intro m hm
-  apply Exists.intro m
+  refine And.intro hm.left ?_
+  intro v
+  apply Exists.intro (ed.div v m)
+  apply Exists.intro (ed.mod v m)
   apply And.intro
-  . exact hm.left
-  . intro v
-    apply Exists.intro (ed.div v m)
-    apply Exists.intro (ed.mod v m)
-    apply And.intro
-    . exact ed.div_mod_eq v m
-    . have alt := imp_not_comm.mp (hm.right (ed.mod v m)) (ed.incr_rel v m)
-      simp only [Set.mem_compl_iff, not_not] at alt
-      exact alt
+  . exact ed.div_mod_eq v m
+  . have alt := imp_not_comm.mp (hm.right (ed.mod v m)) (ed.incr_rel v m)
+    simp only [Set.mem_compl_iff, not_not] at alt
+    exact alt
 
 lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x = -1) := by
   apply Iff.intro
@@ -57,21 +55,19 @@ lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x =
     intro h
     have m_zero : m = 0 := by
       by_contra abs
-      have abs' : n ^ 2 * ((1 : ℝ) / 4) + m ^ 2 * (19 / 4) > 1 := by
+      have : n ^ 2 * ((1 : ℝ) / 4) + m ^ 2 * (19 / 4) > 1 := by
         apply lt_of_lt_of_le
         . have lt : (1 : ℝ) < (19 / 4) := by
             apply (one_lt_div zero_lt_four).mpr
             norm_cast
           exact lt
-        . have eq : (19 : ℝ) / 4 = 0 + 19 / 4 := Eq.symm (AddZeroClass.zero_add (19 / 4))
-          rw [eq]
+        . rw [Eq.symm (AddZeroClass.zero_add (19 / 4))]
           apply add_le_add
-          . simp only [one_div, inv_pos, Nat.ofNat_pos, mul_nonneg_iff_of_pos_right]
-            exact sq_nonneg (n : ℝ)
+          . simp [sq_nonneg]
           . simp only [zero_add, Nat.ofNat_pos, div_pos_iff_of_pos_left, le_mul_iff_one_le_left, one_le_sq_iff_one_le_abs]
             norm_cast
             exact Int.one_le_abs abs
-      exact (ne_of_gt abs') h
+      linarith
     rw [m_zero] at h
     rw [m_zero] at hm
     simp only [one_div, Int.cast_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_mul, add_zero] at h
@@ -92,25 +88,18 @@ lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x =
     | inl one =>
       apply Or.inr
       rw [one] at hm
-      ext
-      rw [hm.left, Subring.coe_neg R_subring, Subring.coe_one R_subring]
-      apply Complex.ext
-      repeat simp
+      simp [Subtype.ext_iff, hm.left, Subring.coe_neg R_subring, Subring.coe_one R_subring, Complex.ext_iff]
     | inr mone =>
       apply Or.inl
       rw [mone] at hm
-      ext
-      rw [hm.left, Subring.coe_one R_subring]
-      apply Complex.ext
-      repeat simp
+      simp [Subtype.ext_iff, hm.left, Subring.coe_one R_subring, Complex.ext_iff]
   . intro h
     apply h.elim
+    repeat
     . intro eq
-      rw [eq, Subring.coe_one R_subring]
-      simp
+      simp [eq, Subring.coe_one R_subring]
     . intro eq
-      rw [eq, Subring.coe_neg R_subring, Subring.coe_one R_subring]
-      simp
+      simp [eq, Subring.coe_neg R_subring, Subring.coe_one R_subring]
 
 lemma invertible_iff_norm_one {x : R} : (∃ x' : R, x * x' = 1) ↔ ‖x.val‖ = 1 := by
   apply Iff.intro
@@ -137,8 +126,7 @@ lemma invertible_iff_norm_one {x : R} : (∃ x' : R, x * x' = 1) ↔ ‖x.val‖
     repeat
       intro eq
       apply Exists.intro x
-      rw [eq]
-      simp
+      simp [eq]
 
 lemma ne_of_re_ne (a b : ℂ) : a.re ≠ b.re → a ≠ b := by
   intro h
@@ -179,16 +167,13 @@ lemma small_norm {u : R} : u = 0 ∨ u = 1 ∨ u = -1 → ‖u.val‖ ≤ 1 := b
   intro h
   cases h with
   | inl zero =>
-    rw [zero, Subring.coe_zero R_subring]
-    simp
+    simp [zero, Subring.coe_zero R_subring]
   | inr nonzero =>
     cases nonzero with
     | inl one =>
-      rw [one, Subring.coe_one R_subring]
-      simp
+      simp [one, Subring.coe_one R_subring]
     | inr mone =>
-      rw [mone, Subring.coe_neg R_subring, Subring.coe_one R_subring]
-      simp
+      simp [mone, Subring.coe_neg R_subring, Subring.coe_one R_subring]
 
 lemma less_four_is_zero_one_two_three_four {n : ℤ} : |n| ≤ 4 → (|n| = 0 ∨ |n| = 1 ∨ |n| = 2 ∨ |n| = 3 ∨ |n| = 4) := by
   intro
@@ -224,13 +209,11 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
       have : (n : ℝ) ^ 2 * (1 / 4) + (m : ℝ) ^ 2 * (19 / 4) > 5 := calc
         _ ≥ (0 : ℝ) + (4 * (19 / 4)) := by
           apply add_le_add
-          . simp only [one_div, inv_pos, Nat.ofNat_pos, mul_nonneg_iff_of_pos_right]
-            exact sq_nonneg _
+          . simp [sq_nonneg]
           . simp only [Nat.ofNat_pos, div_pos_iff_of_pos_left, mul_le_mul_right]
             rw [←sq_abs]
             apply (Real.sqrt_le_left (abs_nonneg _)).mp
-            have eq := (Real.sqrt_eq_iff_mul_self_eq zero_le_four zero_le_two).mpr (by ring)
-            rw [eq]
+            rw [(Real.sqrt_eq_iff_mul_self_eq zero_le_four zero_le_two).mpr (by ring)]
             norm_cast
         _ > 5 := by
           field_simp
@@ -244,19 +227,17 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
         have one_mod : m ≡ 1 [ZMOD 2] := by
           apply Or.elim abs_m_one
           repeat exact λ h => congr_fun (congr_arg HMod.hMod h) 2
-        have : 0 ≡ 1 [ZMOD 2] := Int.ModEq.trans hm.right one_mod
+        have := Int.ModEq.trans hm.right one_mod
         contradiction
       have : (n : ℝ) ^ 2 * (1 / 4) + (m : ℝ) ^ 2 * (19 / 4) ≥ 5 := calc
         _ ≥ ((1 : ℝ) / 4) + (19 / 4) := by
           apply add_le_add
-          . simp only [one_div, inv_pos, Nat.ofNat_pos, le_mul_iff_one_le_left, one_le_sq_iff_one_le_abs]
-            have th := Int.one_le_abs n_ne_zero
+          . have th := Int.one_le_abs n_ne_zero
             rify at th
-            exact th
-          . simp only [Nat.ofNat_pos, div_pos_iff_of_pos_left, le_mul_iff_one_le_left, one_le_sq_iff_one_le_abs]
-            have th := Int.one_le_abs abs
+            simpa
+          . have th := Int.one_le_abs abs
             rify at th
-            exact th
+            simpa
         _ = _ := by ring
       linarith
   rw [m_zero] at h
@@ -304,7 +285,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
         repeat
           intro h
           exact congr_fun (congr_arg HMod.hMod h) 2
-      have : 0 ≡ 1 [ZMOD 2] := Int.ModEq.trans hm.right.symm one_mod
+      have := Int.ModEq.trans hm.right.symm one_mod
       contradiction
     | inr other =>
       cases other with
@@ -315,15 +296,13 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
           rw [two] at hm
           simp only [Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, div_self] at hm
           apply Or.inr; apply Or.inl
-          ext
-          rw [Subring.coe_one R_subring]
+          rw [Subtype.ext_iff, Subring.coe_one R_subring]
           exact hm.left
         | inr mtwo =>
           rw [mtwo] at hm
           simp only [Int.reduceNeg, Int.cast_neg, Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, neg_div_self] at hm
           apply Or.inr; apply Or.inr; apply Or.inl
-          ext
-          rw [Subring.coe_neg R_subring, Subring.coe_one R_subring, hm.left]
+          rw [Subtype.ext_iff, Subring.coe_neg R_subring, Subring.coe_one R_subring, hm.left]
           apply Complex.ext
           repeat simp
       | inr other =>
@@ -335,7 +314,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
             repeat
               intro h
               exact congr_fun (congr_arg HMod.hMod h) 2
-          have : 0 ≡ 1 [ZMOD 2] := Int.ModEq.trans hm.right.symm one_mod
+          have := Int.ModEq.trans hm.right.symm one_mod
           contradiction
         | inr four =>
           have four : n = 4 ∨ n = -4 := abs_eq_abs.mp four
@@ -343,10 +322,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
           | inl four =>
             rw [four, Int.cast_ofNat] at hm
             apply Or.inr; apply Or.inr; apply Or.inr; apply Or.inl
-            have eq : (1 : R) + (1 : R) = (2 : R) := one_add_one_eq_two
-            rw [←eq]
-            ext
-            rw [Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
+            rw [←one_add_one_eq_two, Subtype.ext_iff, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
             apply Complex.ext
             . ring_nf
               rfl
@@ -355,10 +331,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
             rw [mfour] at hm
             simp only [Int.reduceNeg, Int.cast_neg, Int.cast_ofNat] at hm
             apply Or.inr; apply Or.inr; apply Or.inr; apply Or.inr
-            have eq : (1 : R) + (1 : R) = (2 : R) := one_add_one_eq_two
-            rw [←eq]
-            ext
-            rw [Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
+            rw [←one_add_one_eq_two, Subtype.ext_iff, Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
             apply Complex.ext
             . ring_nf
               rfl
@@ -391,56 +364,47 @@ lemma norm_5_9_norm {x : norm_5_9} : Complex.normSq x ≤ 9 := by
   have h := x.property
   cases h with
   | inl val =>
-    rw [val]
-    repeat (simp only [norm_5_pp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+    repeat (simp only [val, norm_5_pp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
     linarith
   | inr h =>
     cases h with
     | inl val =>
-      rw [val]
-      repeat (simp only [norm_5_pm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+      repeat (simp only [val, norm_5_pm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
       linarith
     | inr h =>
       cases h with
       | inl val =>
-        rw [val]
-        repeat (simp only [norm_5_mp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+        repeat (simp only [val, norm_5_mp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
         linarith
       | inr h =>
         cases h with
         | inl val =>
-          rw [val]
-          repeat (simp only [norm_5_mm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+          repeat (simp only [val, norm_5_mm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
           linarith
         | inr h =>
           cases h with
           | inl val =>
-            rw [val]
-            repeat (simp only [norm_7_pp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+            repeat (simp only [val, norm_7_pp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
             linarith
           | inr h =>
             cases h with
             | inl val =>
-              rw [val]
-              repeat (simp only [norm_7_pm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+              repeat (simp only [val, norm_7_pm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
               linarith
             | inr h =>
               cases h with
               | inl val =>
-                rw [val]
-                repeat (simp only [norm_7_mp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+                repeat (simp only [val, norm_7_mp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
                 linarith
               | inr h =>
                 cases h with
                 | inl val =>
-                  rw [val]
-                  repeat (simp only [norm_7_mm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
+                  repeat (simp only [val, norm_7_mm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
                   linarith
                 | inr h =>
                   cases h with
                   | inl val =>
-                    rw [val]
-                    repeat (simp only [norm_9_m, Complex.normSq_mk, mul_neg, neg_mul, neg_neg, mul_zero, add_zero, ge_iff_le, le_refl]; ring_nf)
+                    repeat (simp only [val, norm_9_m, Complex.normSq_mk, mul_neg, neg_mul, neg_neg, mul_zero, add_zero, ge_iff_le, le_refl]; ring_nf)
                     linarith
                   | inr val =>
                     rw [val]
@@ -493,10 +457,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
   intro not_small
   rw [Set.mem_def, small, invertible_iff_norm_one, norm_one_iff_one_or_minus_one] at not_small
   simp only [not_or] at not_small
-  rw [usd_equivalent, not_forall]
-  conv in ¬∃ q r, _ => rw [not_exists]
-  conv in ¬∃ r, _ => rw [not_exists]
-  conv in ¬ (_ ∧ _) => rw [not_and_or, ←imp_iff_not_or]
+  simp only [usd_equivalent, not_forall, not_exists, not_and_or, ←imp_iff_not_or]
   cases le_or_lt 10 (Complex.normSq u) with
   | inl more =>
     apply Exists.intro 2
@@ -511,9 +472,8 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
     | inl zero =>
       rw [zero, mul_zero, zero_add] at h₁
       rw [←h₁, ←one_add_one_eq_two] at h₂
-      repeat rw [Subtype.ext_iff] at h₂
-      rw [Subring.coe_neg R_subring, Subring.coe_add R_subring] at h₂
-      rw [Subring.coe_one R_subring, Subring.coe_zero R_subring] at h₂
+      simp only [Subtype.ext_iff] at h₂
+      rw [Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring, Subring.coe_zero R_subring] at h₂
       ring_nf at h₂
       simp only [OfNat.ofNat_ne_zero, OfNat.ofNat_ne_one, false_or] at h₂
       have : (2 : ℂ) ≠ (-1 : ℂ) := by norm_cast
@@ -537,8 +497,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
           . apply Real.sqrt_le_iff.mpr
             apply And.intro
             . exact AbsoluteValue.nonneg Complex.abs ↑u
-            . rw [Complex.abs]
-              field_simp
+            . field_simp [Complex.abs]
               exact more
           . apply (sq_norm_is_integer_on_R q).elim
             intro n hn
@@ -547,8 +506,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
             rw [hn]
             norm_cast
             by_contra abs
-            have is_zero := Nat.eq_zero_of_not_pos abs
-            rw [is_zero] at hn
+            rw [Nat.eq_zero_of_not_pos abs] at hn
             simp only [CharP.cast_eq_zero, map_eq_zero] at hn
             rw [←Subring.coe_zero R_subring] at hn
             rw [Subtype.ext_iff] at nonzero
@@ -576,9 +534,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
           let r := Classical.choose hq
           let hr := Classical.choose_spec hq
 
-          have q_eq : Classical.choose ex = q := by rfl
-          have r_eq : Classical.choose hq = r := by rfl
-          rw [r_eq, q_eq] at hr
+          simp only [q, r] at hr
 
           let r' : norm_0_1 := by
             apply Subtype.mk r
@@ -662,12 +618,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
           let hq := Classical.choose_spec ex
           let r := Classical.choose hq
           let hr := Classical.choose_spec hq
-          have r_eq : Classical.choose hq = r := by rfl
-          have q_eq : Classical.choose ex = q := by rfl
-          have eq₀ : (f z).1 = q := by rfl
-          have eq₁ : (f z).2 = r := by rfl
-          rw [eq₀, eq₁]
-          rw [r_eq, q_eq] at hr
+          simp only [Prod.fst, Prod.snd, q, r] at hr
           exact hr.left
         have eq₂ : x = u * (f x).1 + (f x).2 := eq x
         have eq₃ : y = u * (f y).1 + (f y).2 := eq y
@@ -765,25 +716,20 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
         have u_eq : u.val.im = 0 := by
           apply poss.elim
           . intro h
-            rw [h, ←one_add_one_eq_two, Subring.coe_add R_subring, Subring.coe_one R_subring]
-            simp
+            simp [h, ←one_add_one_eq_two, Subring.coe_add R_subring, Subring.coe_one R_subring]
           . intro h
-            rw [h, ←one_add_one_eq_two, Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring]
-            simp
+            simp [h, ←one_add_one_eq_two, Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring]
         have eq : ∀ x : R, x = 0 ∨ x = 1 ∨ x = -1 → x.val.im = 0 := by
           intro x hx
           apply hx.elim
           . intro hx
-            rw [hx, Subring.coe_zero R_subring]
-            simp
+            simp [hx, Subring.coe_zero R_subring]
           . intro hx
             apply hx.elim
             . intro hx
-              rw [hx, Subring.coe_one R_subring]
-              simp
+              simp [hx, Subring.coe_one R_subring]
             . intro hx
-              rw [hx, Subring.coe_neg R_subring, Subring.coe_one R_subring]
-              simp
+              simp [hx, Subring.coe_neg R_subring, Subring.coe_one R_subring]
         rw [Complex.add_im, Complex.mul_im, val_eq, u_eq, eq q q_poss, eq r h₂]
         simp
       contradiction

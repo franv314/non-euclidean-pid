@@ -55,8 +55,7 @@ theorem R_closed_under_complex_addition (z₁ z₂ : ℂ) : R z₁ → R z₂ �
   apply Exists.intro (x₁ + x₂)
   apply Exists.intro (y₁ + y₂)
   apply And.intro
-  . rw [h₁''.left]
-    rw [h₂''.left]
+  . rw [h₁''.left, h₂''.left]
     apply Complex.ext
     repeat
       simp only [Complex.add_re, Complex.add_im, Int.cast_add]
@@ -93,12 +92,12 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z
     (x₁ * y₂) + (y₁ * x₂) ≡ (x₁ * y₂) + (x₂ * y₁) [ZMOD 2] := by conv in (y₁ * x₂) => rw [mul_comm]
     _ ≡ (x₁ * x₂) + (x₂ * x₁) [ZMOD 2] := by
       apply Int.ModEq.add
-      . apply Int.ModEq.mul rfl h₂''.right.symm
-      . apply Int.ModEq.mul rfl h₁''.right.symm
+      . exact Int.ModEq.mul rfl h₂''.right.symm
+      . exact Int.ModEq.mul rfl h₁''.right.symm
     _ ≡ (x₁ * x₂) + (x₁ * x₂) [ZMOD 2] := by rw [mul_comm]
     _ ≡ (1 * (x₁ * x₂)) + (1 * (x₁ * x₂)) [ZMOD 2] := by rw [one_mul]
     _ ≡ 2 * (x₁ * x₂) [ZMOD 2] := by
-      rw [←right_distrib 1 1 (x₁ * x₂)]
+      rw [←right_distrib]
       simp
     _ ≡ 0 * (x₁ * x₂) [ZMOD 2] := Int.ModEq.mul_right (x₁ * x₂) rfl
     _ ≡ 0 [ZMOD 2] := by simp
@@ -109,8 +108,7 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z
   apply Exists.intro (x / 2)
   apply Exists.intro (y / 2)
   apply And.intro
-  . rw [h₁''.left]
-    rw [h₂''.left]
+  . rw [h₁''.left, h₂''.left]
     apply Complex.ext
     . rw [Complex.mul_re]
       ring_nf
@@ -153,7 +151,7 @@ theorem R_closed_under_complex_multiplication (z₁ z₂ : ℂ) : R z₁ → R z
         _ ≡ (x₁ * x₂) + (y₁ * y₂) [ZMOD 4] := by simp
         _ ≡ y [ZMOD 4] := (Int.modEq_of_dvd div4).symm
 
-    apply Int.ModEq.cancel_left_div_gcd (Int.sign_eq_one_iff_pos.mp rfl) eq
+    exact Int.ModEq.cancel_left_div_gcd (Int.sign_eq_one_iff_pos.mp rfl) eq
 
 def R_subsemigroup : Subsemigroup ℂ := by
   apply Subsemigroup.mk R
