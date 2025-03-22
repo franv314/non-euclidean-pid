@@ -274,8 +274,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
     simp only [Int.cast_zero, zero_div, Int.ModEq.refl, and_true] at hm
     apply Or.inl
     ext
-    rw [Subring.coe_zero R_subring]
-    exact hm
+    rwa [Subring.coe_zero R_subring]
   | inr other =>
     cases other with
     | inl one =>
@@ -426,14 +425,13 @@ lemma neg_neq {a : ℝ} : a ≠ 0 → a ≠ -a := by
   norm_cast
 
 lemma norm_5_9_card : Nat.card norm_5_9 = 10 := by
-  rw [norm_5_9, Set.Nat.card_coe_set_eq]
-
   have ne₀ : ¬√19 = -√19 ↔ True := Iff.intro (λ _ => trivial) (λ _ => neg_neq (Real.sqrt_ne_zero'.mpr Nat.ofNat_pos'))
   have ne₁ : (1 : ℝ) = -1 ↔ False := Iff.intro (by norm_cast) False.elim
   have ne₂ : (1 : ℝ) = -3 ↔ False := Iff.intro (by norm_cast) False.elim
   have ne₃ : (-1 : ℝ) = 3 ↔ False := Iff.intro (by norm_cast) False.elim
   have ne₄ : (3 : ℝ) = -3 ↔ False := Iff.intro (by norm_cast) False.elim
 
+  rw [norm_5_9, Set.Nat.card_coe_set_eq]
   rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₁, ne₂])]
   rw [Set.ncard_insert_of_not_mem (by field_simp [ne₁, ne₂])]
   rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₃])]
@@ -443,7 +441,6 @@ lemma norm_5_9_card : Nat.card norm_5_9 = 10 := by
   rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀])]
   rw [Set.ncard_insert_of_not_mem (by field_simp)]
   rw [Set.ncard_insert_of_not_mem (by field_simp [eq_comm, ne₄])]
-
   simp
 
 instance : Finite norm_0_1 := by
@@ -624,8 +621,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
         have eq₃ : y = u * (f y).1 + (f y).2 := eq y
         rw [←eq₀, ←eq₁] at eq₃
         rw [←eq₃] at eq₂
-        rw [Subtype.ext_iff]
-        exact eq₂
+        rwa [Subtype.ext_iff]
       apply f.elim
       intro f inj
       have card_domain : Nat.card (norm_0_1 × norm_0_1) = 9 := by simp
@@ -730,6 +726,5 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
               simp [hx, Subring.coe_one R_subring]
             . intro hx
               simp [hx, Subring.coe_neg R_subring, Subring.coe_one R_subring]
-        rw [Complex.add_im, Complex.mul_im, val_eq, u_eq, eq q q_poss, eq r h₂]
-        simp
+        simp [Complex.add_im, Complex.mul_im, val_eq, u_eq, eq q q_poss, eq r h₂]
       contradiction

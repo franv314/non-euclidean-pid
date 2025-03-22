@@ -449,11 +449,9 @@ theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
         rify
         apply And.intro
         . conv_lhs at abs => rw [div_eq_mul_inv]
-          rw [←mul_assoc, ←div_eq_mul_inv] at abs
-          exact abs
+          rwa [←mul_assoc, ←div_eq_mul_inv] at abs
         . conv_rhs at ub => rw [div_eq_mul_inv]
-          rw [←mul_assoc, ←div_eq_mul_inv] at ub
-          exact ub
+          rwa [←mul_assoc, ←div_eq_mul_inv] at ub
     have in_strip' : ∃ k : ℤ, k * √19 / 2 - ((√19 - 2 * √3) / 2) ≤ (2 * v.val / u).im ∧ (2 * v.val / u).im ≤ k * √19 / 2 + ((√19 - 2 * √3) / 2) := by
       apply in_strip.elim
       intro k hk
@@ -714,9 +712,8 @@ theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
       have is_zero : Complex.normSq (0 : R) = 0 := calc
         _ = Complex.normSq (0 : ℂ) := rfl
         _ = 0 := by simp
-      rw [is_zero]
       have := Subtype.coe_ne_coe.mpr neq
-      simpa
+      simpa [is_zero]
 
 instance R_dh_domain : DedekindHasseDomain R where
   r := dh_rel_on_r
