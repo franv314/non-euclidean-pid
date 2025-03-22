@@ -210,14 +210,13 @@ lemma close_int (x : ℝ) : ∃ l : ℤ, |x - l| ≤ 1 / 2 := by
         ring_nf
         by_contra abs
         rw [not_le] at abs
-        have p := calc
+        have := calc
           l + 1 ≥ (⌈x⌉ : ℝ) := by
             have diseq := Int.ceil_le_floor_add_one x
             rify at diseq
             exact diseq
           _ ≥ x := Int.le_ceil x
           _ > (3 / 2) + ↑l := abs
-          _ = ↑l + (3 / 2) := by rw [add_comm]
         linarith
 
 lemma real_part (x : ℝ) : ∀ k : ℤ, ∃ l : ℤ, l ≡ k [ZMOD 2] ∧ |x - l / 2| ≤ 1 / 2 := by
@@ -238,18 +237,14 @@ lemma real_part (x : ℝ) : ∀ k : ℤ, ∃ l : ℤ, l ≡ k [ZMOD 2] ∧ |x - 
     apply (th x).imp
     intro k hk
     apply And.intro
-    . calc
-        k ≡ 0 [ZMOD 2] := hk.left
-        _ ≡ _ [ZMOD 2] := zero.symm
+    . exact Int.ModEq.trans hk.left zero.symm
     . exact hk.right
   | inr one =>
     apply (th (x - 1 / 2)).elim
     intro k hk
     apply Exists.intro (k + 1)
     apply And.intro
-    . calc
-        k + 1 ≡ 0 + 1 [ZMOD 2] := Int.ModEq.add_right 1 hk.left
-        _ ≡ _ [ZMOD 2] := one.symm
+    . exact Int.ModEq.trans (Int.ModEq.add_right 1 hk.left) one.symm
     . rify
       ring_nf
       have tg := hk.right
@@ -430,11 +425,9 @@ theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
         apply not_in_strip
         apply Exists.intro k
         apply And.intro
-        . conv_rhs at lb => rw [div_eq_mul_inv]
-          rw [←mul_assoc] at lb
-          exact gt_iff_lt.mp lb
-        . conv_rhs at abs => rw [div_eq_mul_inv]
-          rw [←mul_assoc] at abs
+        . conv_rhs at lb => rw [div_eq_mul_inv, ←mul_assoc]
+          exact lb
+        . conv_rhs at abs => rw [div_eq_mul_inv, ←mul_assoc]
           exact abs
       . by_contra abs
         rw [not_le] at abs
@@ -453,66 +446,42 @@ theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
           simpa
         apply not_in_strip
         apply Exists.intro (k + 1)
+        rify
         apply And.intro
-        . rify
-          conv_lhs at abs => rw [div_eq_mul_inv]
+        . conv_lhs at abs => rw [div_eq_mul_inv]
           rw [←mul_assoc, ←div_eq_mul_inv] at abs
-          assumption
-        . rify
-          conv_rhs at ub => rw [div_eq_mul_inv]
+          exact abs
+        . conv_rhs at ub => rw [div_eq_mul_inv]
           rw [←mul_assoc, ←div_eq_mul_inv] at ub
           exact ub
-    have in_strip' : ∃ k : ℤ, k * √19 + √3 ≤ (2 * v.val / u).im ∧ (2 * v.val / u).im ≤ (k + 1) * √19 - √3 := by
-      apply in_strip.imp
-      intro k hk
-      apply And.intro
-      . have th : (k * (√19 / 2) + √3 / 2) * 2 ≤ ((v.val / u).im) * 2 := by
-          apply (mul_le_mul_iff_of_pos_right zero_lt_two).mpr
-          exact hk.left
-        ring_nf at th
-        ring_nf
-        rw [←Complex.im_mul_ofReal (v.val * u.val⁻¹) 2] at th
-        exact th
-      . have th : ((v.val / u).im) * 2 ≤ ((k + 1) * (√19 / 2) - √3 / 2) * 2 := by
-          apply (mul_le_mul_iff_of_pos_right zero_lt_two).mpr
-          exact hk.right
-        ring_nf at th
-        ring_nf
-        rw [←Complex.im_mul_ofReal (v.val * u.val⁻¹) 2] at th
-        exact th
-    have in_strip'' : ∃ k : ℤ, k * √19 / 2 - ((√19 - 2 * √3) / 2) ≤ (2 * v.val / u).im ∧ (2 * v.val / u).im ≤ k * √19 / 2 + ((√19 - 2 * √3) / 2) := by
-      apply in_strip'.elim
+    have in_strip' : ∃ k : ℤ, k * √19 / 2 - ((√19 - 2 * √3) / 2) ≤ (2 * v.val / u).im ∧ (2 * v.val / u).im ≤ k * √19 / 2 + ((√19 - 2 * √3) / 2) := by
+      apply in_strip.elim
       intro k hk
       apply Exists.intro (2 * k + 1)
-      apply And.intro
-      . have hk := hk.left
-        field_simp
-        ring_nf
-        ring_nf at hk
-        exact hk
-      . have hk := hk.right
-        field_simp
-        ring_nf
-        ring_nf at hk
-        exact hk
+      conv_lhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
+      conv_rhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
+      ring_nf at hk
+      rw [←Complex.im_mul_ofReal] at hk
+      norm_cast at hk
+      push_cast
+      ring_nf
+      exact hk
     have strip_diseq : (√19 - 2 * √3) / 2 < √3 / 2 := by
-      refine div_lt_div₀ ?_ (by rfl) (Real.sqrt_nonneg 3) zero_lt_two
-      apply sub_right_lt_of_lt_add
-      rw [←abs_eq_self.mpr (Real.sqrt_nonneg 19)]
-      rw [←abs_eq_self.mpr (add_nonneg (Real.sqrt_nonneg 3) (mul_nonneg zero_le_two (Real.sqrt_nonneg 3)))]
-      apply sq_lt_sq.mp
-      repeat (simp only [Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-      have diseq := Nat.lt_of_sub_eq_succ (rfl : 27 - 19 = _)
-      rify at diseq
-      exact diseq
-    have in_strip''' : ∃ k : ℤ, k * √19 / 2 - √3 / 2 < (2 * v.val / u).im ∧ (2 * v.val / u).im < k * √19 / 2 + √3 / 2 := by
-      apply in_strip''.imp
+      refine div_lt_div_of_pos_right ?_ zero_lt_two
+      rw [sub_lt_iff_lt_add]
+      refine (Real.sqrt_lt' ?_).mpr ?_
+      . ring_nf
+        exact mul_pos (Real.sqrt_pos.mpr zero_lt_three) zero_lt_three
+      . ring_nf
+        simp only [Nat.ofNat_nonneg, Real.sq_sqrt]
+        norm_cast
+    have in_strip'' : ∃ k : ℤ, k * √19 / 2 - √3 / 2 < (2 * v.val / u).im ∧ (2 * v.val / u).im < k * √19 / 2 + √3 / 2 := by
+      apply in_strip'.imp
       intro k hk
       apply And.intro
       . apply gt_of_ge_of_gt hk.left (by simpa)
       . apply lt_of_le_of_lt hk.right (by simpa)
-
-    apply in_strip'''.elim
+    apply in_strip''.elim
     intro k hk
     apply (real_part (2 * v.val / u).re k).elim
     intro h hh
