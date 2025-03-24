@@ -5,7 +5,7 @@ variable (α : Type u)
 class DedekindHasseDomain extends CommRing α, IsDomain α where
   r : α → α → Prop
   r_wellFounded : WellFounded r
-  linear_comb : ∀ u v: α, (u ≠ 0) → ¬(u ∣ v) → (∃ s t: α, r 0 (s * u + t * v) ∧ r (s * u + t * v) u)
+  linear_comb {u v : α} : (u ≠ 0) → ¬(u ∣ v) → (∃ s t: α, r 0 (s * u + t * v) ∧ r (s * u + t * v) u)
 
 theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrincipalIdealRing α := by
   apply IsPrincipalIdealRing.mk
@@ -14,9 +14,7 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
   cases em (∃ x : α, x ≠ 0 ∧ ideal.carrier x) with
   | inl normal =>
     let non_zero : Set α := λ x => x ≠ 0 ∧ ideal.carrier x
-    have min_not_small := by
-      apply WellFounded.has_min (δ.r_wellFounded) non_zero
-      exact normal
+    have min_not_small := WellFounded.has_min (δ.r_wellFounded) non_zero normal
     apply min_not_small.imp
     intro γ hγ
     apply Ideal.ext
@@ -31,7 +29,7 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
         rw [smul_eq_mul, mul_comm]
         exact hκ.symm
       | inr abs =>
-          have lin := δ.linear_comb _ _ hγ.left.left abs
+          have lin := δ.linear_comb hγ.left.left abs
           apply lin.elim
           intro s hs
           apply hs.elim
@@ -72,8 +70,7 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
         by_contra abs
         apply stupid
         apply Exists.intro v
-        apply And.intro
-        repeat assumption
+        simpa [abs]
       simp [v_zero]
     . intro in_span_zero
       rw [eq_zero_of_zero_dvd (Ideal.mem_span_singleton.mp in_span_zero)]
@@ -371,7 +368,7 @@ lemma sq_two_mod_four_four_mod_eight {n : ℤ} : n ≡ 2 [ZMOD 4] → n ^ 2 ≡ 
   apply Exists.intro (-2 * k ^ 2 - 2 * k)
   ring_nf
 
-theorem dh_rel_on_r_linear_comb (u v : R) : (u ≠ 0) → ¬(u ∣ v) → ∃ s t : R, dh_rel_on_r 0 (s * u + t * v) ∧ dh_rel_on_r (s * u + t * v) u := by
+theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s t : R, dh_rel_on_r 0 (s * u + t * v) ∧ dh_rel_on_r (s * u + t * v) u := by
   intro nzero ndiv
   have nzero_c : (u : ℂ) ≠ 0 := by
     intro abs
