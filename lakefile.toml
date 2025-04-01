@@ -4,6 +4,7 @@ defaultTargets = ["NonEuclideanPid"]
 
 [[lean_lib]]
 name = "NonEuclideanPid"
+moreLeanArgs = ["-DwarningAsError=true"]
 
 [[require]]
 name = "mathlib"
