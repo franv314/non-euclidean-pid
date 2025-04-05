@@ -3,40 +3,29 @@ import Mathlib.SetTheory.Cardinal.Basic
 
 set_option maxHeartbeats 0
 
-variable (α : Type u) [CommRing α]
-
-/-
- - Type classes do not work well when "negated",
- - therefore we redefine what an Euclidean structure
- - over a ring is
- -/
-structure Euclidean where
-  r : α → α → Prop
-  r_well_founded : WellFounded r
-  div : α → α → α
-  mod : α → α → α
-  div_mod_eq (x y : α) : x = y * (div x y) + (mod x y)
-  incr_rel (x y : α) : r (mod x y) y
-
 @[simp]
-def small : Set α :=
-  λ x => x = 0 ∨ ∃ x' : α, x * x' = 1
+def small : Set R :=
+  λ x => x = 0 ∨ ∃ x' : R, x * x' = 1
 
-def is_universal_side_divisor (u : α) :=
-  u ∉ small α ∧ ∀ x : α, ∃ q r : α, x = u * q + r ∧ r ∈ small α
+def is_universal_side_divisor (u : R) :=
+  u ∉ small ∧ ∀ x : R, ∃ q r : R, x = u * q + r ∧ r ∈ small
 
-theorem euclidean_domain_has_usd (ed : Euclidean α) : (small α)ᶜ.Nonempty → ∃ u : α, is_universal_side_divisor α u := by
+theorem euclidean_domain_has_usd [ed : EuclideanDomain R] (ext : ed.toCommRing = R_commring) : smallᶜ.Nonempty → ∃ u : R, is_universal_side_divisor u := by
   intro has_not_small
-  have min_not_small := WellFounded.has_min (ed.r_well_founded) (small α)ᶜ has_not_small
+  have min_not_small := WellFounded.has_min (ed.r_wellFounded) smallᶜ has_not_small
   apply min_not_small.imp
   intro m hm
   refine And.intro hm.left ?_
   intro v
-  apply Exists.intro (ed.div v m)
-  apply Exists.intro (ed.mod v m)
+  apply Exists.intro (ed.quotient v m)
+  apply Exists.intro (ed.remainder v m)
   apply And.intro
-  . exact ed.div_mod_eq v m
-  . have alt := imp_not_comm.mp (hm.right (ed.mod v m)) (ed.incr_rel v m)
+  . rw [←ext]
+    exact (ed.quotient_mul_add_remainder_eq v m).symm
+  . have m_not_zero := (not_or.mp (Set.mem_def.mp hm.left)).left
+    have alt := by
+      refine imp_not_comm.mp (hm.right (ed.remainder v m)) (ed.remainder_lt v ?_)
+      rwa [ext]
     simp only [Set.mem_compl_iff, not_not] at alt
     exact alt
 
@@ -136,7 +125,7 @@ lemma ne_of_im_ne (a b : ℂ) : a.im ≠ b.im → a ≠ b := by
   intro h
   exact λ x => h (congrArg Complex.im x)
 
-theorem not_all_small : (small R)ᶜ.Nonempty := by
+theorem not_all_small : smallᶜ.Nonempty := by
   apply Exists.intro 2
   rw [Set.mem_compl_iff, Set.mem_def, small, not_or]
   apply And.intro
@@ -155,7 +144,7 @@ theorem not_all_small : (small R)ᶜ.Nonempty := by
       norm_cast
 
 lemma usd_equivalent {u : R} :
-(∀ x : R, ∃ q r : R, x = u * q + r ∧ r ∈ small R) ↔ (∀ x : R, ∃ q r : R, x = u * q + r ∧ (r = 0 ∨ r = 1 ∨ r = -1))
+(∀ x : R, ∃ q r : R, x = u * q + r ∧ r ∈ small) ↔ (∀ x : R, ∃ q r : R, x = u * q + r ∧ (r = 0 ∨ r = 1 ∨ r = -1))
 := by
   apply forall_congr'
   intro x
@@ -447,7 +436,7 @@ instance : Finite norm_0_1 := by
   apply Nat.finite_of_card_ne_zero
   simp
 
-theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor R u := by
+theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor u := by
   apply not_exists.mpr
   intro u
   rw [is_universal_side_divisor, not_and_or, or_iff_not_imp_left, not_not]

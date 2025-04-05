@@ -200,7 +200,7 @@ def R_add_subgroup : AddSubgroup ℂ := by
 def R_subring : Subring ℂ :=
   Subring.mk' R R_submonoid R_add_subgroup rfl rfl
 
-instance : CommRing R :=
+instance R_commring : CommRing R :=
   Subring.toCommRing R_subring
 
 instance : IsDomain R :=
