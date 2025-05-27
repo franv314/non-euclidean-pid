@@ -118,12 +118,12 @@ lemma invertible_iff_norm_one {x : R} : (∃ x' : R, x * x' = 1) ↔ ‖x.val‖
       simp [eq]
 
 lemma ne_of_re_ne (a b : ℂ) : a.re ≠ b.re → a ≠ b := by
-  intro h
-  exact λ x => h (congrArg Complex.re x)
+  intro h x
+  exact h (congrArg Complex.re x)
 
 lemma ne_of_im_ne (a b : ℂ) : a.im ≠ b.im → a ≠ b := by
-  intro h
-  exact λ x => h (congrArg Complex.im x)
+  intro h x
+  exact h (congrArg Complex.im x)
 
 theorem not_all_small : smallᶜ.Nonempty := by
   apply Exists.intro 2
@@ -165,21 +165,8 @@ lemma small_norm {u : R} : u = 0 ∨ u = 1 ∨ u = -1 → ‖u.val‖ ≤ 1 := b
       simp [mone, Subring.coe_neg R_subring, Subring.coe_one R_subring]
 
 lemma less_four_is_zero_one_two_three_four {n : ℤ} : |n| ≤ 4 → (|n| = 0 ∨ |n| = 1 ∨ |n| = 2 ∨ |n| = 3 ∨ |n| = 4) := by
-  intro
-  by_contra abs
-  simp only [abs_eq_zero, not_or] at abs
-  have : 4 < |n| := by
-    rw [←Int.natCast_natAbs]
-    rw [←Int.natCast_natAbs] at abs
-    norm_cast
-    norm_cast at abs
-    refine Nat.lt_of_le_of_ne ?_ (Ne.symm abs.right.right.right.right)
-    refine Nat.lt_of_le_of_ne ?_ (Ne.symm abs.right.right.right.left)
-    refine Nat.lt_of_le_of_ne ?_ (Ne.symm abs.right.right.left)
-    refine Nat.lt_of_le_of_ne ?_ (Ne.symm abs.right.left)
-    refine Nat.lt_of_le_of_ne ?_ (Ne.symm (Int.natAbs_ne_zero.mpr abs.left))
-    exact Nat.zero_le n.natAbs
-  linarith
+  have := abs_nonneg n
+  omega
 
 lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = -1 ∨ u = 2 ∨ u = -2 := by
   intro h

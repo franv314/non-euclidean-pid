@@ -1,3 +1,4 @@
+import Mathlib.Tactic.IntervalCases
 import NonEuclideanPid.RingConstruction
 
 variable (α : Type u)
@@ -286,68 +287,27 @@ lemma fract_not_zero_of_mod_not_zero_q (a b : ℤ) : b > 0 → ¬ a ≡ 0 [ZMOD 
   exact fract_not_zero_of_mod_not_zero a b pos neq
 
 lemma odd_one_mod_eight {n : ℤ} : n ≡ 1 [ZMOD 2] → n ^ 2 ≡ 1 [ZMOD 8] := by
-  intro neq
-  apply (Int.modEq_iff_dvd.mp neq.symm).elim
-  intro k hk
-  rw [Eq.symm (add_eq_of_eq_sub' (id (Eq.symm hk)))]
-  ring_nf
-  rw [add_assoc, ←add_mul]
-  have div : 2 ∣ (k + k ^ 2) := by
-    cases Int.emod_two_eq_zero_or_one k with
-    | inl even =>
-      have e : k % 2 = 0 ↔ k ≡ 0 [ZMOD 2] := Eq.to_iff rfl
-      rw [e] at even
-      apply (Int.modEq_iff_dvd.mp even.symm).elim
-      intro g hg
-      rw [sub_zero] at hg
-      rw [hg]
-      apply Exists.intro (g + 2 * g ^ 2)
-      ring_nf
-    | inr odd =>
-      have e : k % 2 = 1 ↔ k ≡ 1 [ZMOD 2] := Eq.to_iff rfl
-      rw [e] at odd
-      apply (Int.modEq_iff_dvd.mp odd.symm).elim
-      intro g hg
-      have hg := Eq.symm (add_eq_of_eq_sub' (id (Eq.symm hg)))
-      rw [hg]
-      apply Exists.intro (1 + 3 * g + 2 * g ^ 2)
-      ring_nf
-  apply div.elim
-  intro g hg
-  rw [hg]
-  apply Int.modEq_iff_dvd.mpr
-  apply Exists.intro (-g)
-  ring_nf
+  intro h
+  generalize hn : n % 8 = k
+  have : 0 ≤ k := by omega
+  have : k ≤ 7 := by omega
+  interval_cases k
+  repeat
+  . by_contra
+    simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
+    omega
+  . simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
 
 lemma even_zero_or_two_mod_four {n : ℤ} : n ≡ 0 [ZMOD 2] → (n ≡ 0 [ZMOD 4] ∨ n ≡ 2 [ZMOD 4]) := by
   intro h
-  apply (Int.modEq_iff_dvd.mp h.symm).elim
-  intro k hk
-  rw [sub_zero] at hk
-  rw [hk]
-  cases Int.emod_two_eq_zero_or_one k with
-  | inl even =>
-    have e : k % 2 = 0 ↔ k ≡ 0 [ZMOD 2] := Eq.to_iff rfl
-    rw [e] at even
-    apply (Int.modEq_iff_dvd.mp even.symm).elim
-    intro g hg
-    rw [sub_zero] at hg
-    apply Or.inl
-    apply Int.modEq_iff_dvd.mpr
-    apply Exists.intro (-g)
-    rw [hg]
-    ring_nf
-  | inr odd =>
-    have e : k % 2 = 1 ↔ k ≡ 1 [ZMOD 2] := Eq.to_iff rfl
-    rw [e] at odd
-    apply (Int.modEq_iff_dvd.mp odd.symm).elim
-    intro g hg
-    have hg := Eq.symm (add_eq_of_eq_sub' (id (Eq.symm hg)))
-    apply Or.inr
-    apply Int.modEq_iff_dvd.mpr
-    apply Exists.intro (-g)
-    rw [hg]
-    ring_nf
+  generalize hn : n % 4 = k
+  have : 0 ≤ k := by omega
+  have : k ≤ 3 := by omega
+  interval_cases k
+  repeat
+  . simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
+  . simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
+    omega
 
 lemma sq_zero_mod_four_zero_mod_eight {n : ℤ} : n ≡ 0 [ZMOD 4] → n ^ 2 ≡ 0 [ZMOD 8] := by
   intro h
