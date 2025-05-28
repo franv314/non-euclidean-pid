@@ -4,28 +4,25 @@ import Mathlib.SetTheory.Cardinal.Basic
 set_option maxHeartbeats 0
 
 @[simp]
-def small : Set R :=
-  λ x => x = 0 ∨ ∃ x' : R, x * x' = 1
+def small (α : Type u) [CommRing α] : Set α :=
+  λ x => x = 0 ∨ ∃ x' : α, x * x' = 1
 
-def is_universal_side_divisor (u : R) :=
-  u ∉ small ∧ ∀ x : R, ∃ q r : R, x = u * q + r ∧ r ∈ small
+def is_universal_side_divisor {α : Type u} [CommRing α] (u : α) :=
+  u ∉ small α ∧ ∀ x : α, ∃ q r : α, x = u * q + r ∧ r ∈ small α
 
-theorem euclidean_domain_has_usd [ed : EuclideanDomain R] (ext : ed.toCommRing = R_commring) : smallᶜ.Nonempty → ∃ u : R, is_universal_side_divisor u := by
+theorem euclidean_domain_has_usd {α : Type u} (δ : EuclideanDomain α) : (small α)ᶜ.Nonempty → ∃ u : α, is_universal_side_divisor u := by
   intro has_not_small
-  have min_not_small := WellFounded.has_min (ed.r_wellFounded) smallᶜ has_not_small
+  have min_not_small := WellFounded.has_min (δ.r_wellFounded) (small α)ᶜ has_not_small
   apply min_not_small.imp
   intro m hm
   refine And.intro hm.left ?_
   intro v
-  apply Exists.intro (ed.quotient v m)
-  apply Exists.intro (ed.remainder v m)
+  apply Exists.intro (δ.quotient v m)
+  apply Exists.intro (δ.remainder v m)
   apply And.intro
-  . rw [←ext]
-    exact (ed.quotient_mul_add_remainder_eq v m).symm
+  . exact (δ.quotient_mul_add_remainder_eq v m).symm
   . have m_not_zero := (not_or.mp (Set.mem_def.mp hm.left)).left
-    have alt := by
-      refine imp_not_comm.mp (hm.right (ed.remainder v m)) (ed.remainder_lt v ?_)
-      rwa [ext]
+    have alt := imp_not_comm.mp (hm.right (δ.remainder v m)) (δ.remainder_lt v m_not_zero)
     simp only [Set.mem_compl_iff, not_not] at alt
     exact alt
 
@@ -46,16 +43,14 @@ lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x =
       by_contra abs
       have : n ^ 2 * ((1 : ℝ) / 4) + m ^ 2 * (19 / 4) > 1 := by
         apply lt_of_lt_of_le
-        . have lt : (1 : ℝ) < (19 / 4) := by
-            apply (one_lt_div zero_lt_four).mpr
-            norm_cast
+        . have lt : (1 : ℝ) < (19 / 4) := by linarith
           exact lt
         . rw [Eq.symm (AddZeroClass.zero_add (19 / 4))]
           apply add_le_add
           . simp [sq_nonneg]
-          . simp only [zero_add, Nat.ofNat_pos, div_pos_iff_of_pos_left, le_mul_iff_one_le_left, one_le_sq_iff_one_le_abs]
+          . have := Int.one_le_abs abs
+            simp only [zero_add, Nat.ofNat_pos, div_pos_iff_of_pos_left, le_mul_iff_one_le_left, one_le_sq_iff_one_le_abs]
             norm_cast
-            exact Int.one_le_abs abs
       linarith
     rw [m_zero] at h
     rw [m_zero] at hm
@@ -85,9 +80,7 @@ lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x =
   . intro h
     apply h.elim
     repeat
-    . intro eq
-      simp [eq, Subring.coe_one R_subring]
-    . intro eq
+      intro eq
       simp [eq, Subring.coe_neg R_subring, Subring.coe_one R_subring]
 
 lemma invertible_iff_norm_one {x : R} : (∃ x' : R, x * x' = 1) ↔ ‖x.val‖ = 1 := by
@@ -125,7 +118,7 @@ lemma ne_of_im_ne (a b : ℂ) : a.im ≠ b.im → a ≠ b := by
   intro h x
   exact h (congrArg Complex.im x)
 
-theorem not_all_small : smallᶜ.Nonempty := by
+theorem not_all_small : (small R)ᶜ.Nonempty := by
   apply Exists.intro 2
   rw [Set.mem_compl_iff, Set.mem_def, small, not_or]
   apply And.intro
@@ -144,7 +137,7 @@ theorem not_all_small : smallᶜ.Nonempty := by
       norm_cast
 
 lemma usd_equivalent {u : R} :
-(∀ x : R, ∃ q r : R, x = u * q + r ∧ r ∈ small) ↔ (∀ x : R, ∃ q r : R, x = u * q + r ∧ (r = 0 ∨ r = 1 ∨ r = -1))
+(∀ x : R, ∃ q r : R, x = u * q + r ∧ r ∈ small R) ↔ (∀ x : R, ∃ q r : R, x = u * q + r ∧ (r = 0 ∨ r = 1 ∨ r = -1))
 := by
   apply forall_congr'
   intro x
@@ -154,15 +147,9 @@ lemma usd_equivalent {u : R} :
 
 lemma small_norm {u : R} : u = 0 ∨ u = 1 ∨ u = -1 → ‖u.val‖ ≤ 1 := by
   intro h
-  cases h with
-  | inl zero =>
-    simp [zero, Subring.coe_zero R_subring]
-  | inr nonzero =>
-    cases nonzero with
-    | inl one =>
-      simp [one, Subring.coe_one R_subring]
-    | inr mone =>
-      simp [mone, Subring.coe_neg R_subring, Subring.coe_one R_subring]
+  rcases h with h₁ | h₁ | h₁
+  repeat
+    simp_all [h₁, Subring.coe_zero R_subring, Subring.coe_neg R_subring, Subring.coe_one R_subring]
 
 lemma less_four_is_zero_one_two_three_four {n : ℤ} : |n| ≤ 4 → (|n| = 0 ∨ |n| = 1 ∨ |n| = 2 ∨ |n| = 3 ∨ |n| = 4) := by
   have := abs_nonneg n
@@ -243,74 +230,63 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
       _ = _ := by ring
     linarith
   have abs_v := less_four_is_zero_one_two_three_four abs_n_le_two
-  cases abs_v with
-  | inl zero =>
-    rw [abs_eq_zero] at zero
+  rcases abs_v with zero | one | two | three | four
+  . rw [abs_eq_zero] at zero
     rw [zero] at hm
     simp only [Int.cast_zero, zero_div, Int.ModEq.refl, and_true] at hm
     apply Or.inl
     ext
     rwa [Subring.coe_zero R_subring]
-  | inr other =>
-    cases other with
-    | inl one =>
-      have one : n = 1 ∨ n = -1 := abs_eq_abs.mp one
-      have one_mod : n ≡ 1 [ZMOD 2] := by
-        apply one.elim
-        repeat
-          intro h
-          exact congr_fun (congr_arg HMod.hMod h) 2
-      have := Int.ModEq.trans hm.right.symm one_mod
-      contradiction
-    | inr other =>
-      cases other with
-      | inl two =>
-        have two : n = 2 ∨ n = -2 := abs_eq_abs.mp two
-        cases two with
-        | inl two =>
-          rw [two] at hm
-          simp only [Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, div_self] at hm
-          apply Or.inr; apply Or.inl
-          rw [Subtype.ext_iff, Subring.coe_one R_subring]
-          exact hm.left
-        | inr mtwo =>
-          rw [mtwo] at hm
-          simp only [Int.reduceNeg, Int.cast_neg, Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, neg_div_self] at hm
-          apply Or.inr; apply Or.inr; apply Or.inl
-          rw [Subtype.ext_iff, Subring.coe_neg R_subring, Subring.coe_one R_subring, hm.left]
-          apply Complex.ext
-          repeat simp
-      | inr other =>
-        cases other with
-        | inl three =>
-          have three : n = 3 ∨ n = -3 := abs_eq_abs.mp three
-          have one_mod : n ≡ 1 [ZMOD 2] := by
-            apply three.elim
-            repeat
-              intro h
-              exact congr_fun (congr_arg HMod.hMod h) 2
-          have := Int.ModEq.trans hm.right.symm one_mod
-          contradiction
-        | inr four =>
-          have four : n = 4 ∨ n = -4 := abs_eq_abs.mp four
-          cases four with
-          | inl four =>
-            rw [four, Int.cast_ofNat] at hm
-            apply Or.inr; apply Or.inr; apply Or.inr; apply Or.inl
-            rw [←one_add_one_eq_two, Subtype.ext_iff, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
-            apply Complex.ext
-            . ring_nf
-              rfl
-            . simp
-          | inr mfour =>
-            rw [mfour] at hm
-            simp only [Int.reduceNeg, Int.cast_neg, Int.cast_ofNat] at hm
-            apply Or.inr; apply Or.inr; apply Or.inr; apply Or.inr
-            rw [←one_add_one_eq_two, Subtype.ext_iff, Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
-            apply Complex.ext
-            . ring_nf
-              rfl
-            . simp
+  . have one : n = 1 ∨ n = -1 := abs_eq_abs.mp one
+    have one_mod : n ≡ 1 [ZMOD 2] := by
+      apply one.elim
+      repeat
+        intro h
+        exact congr_fun (congr_arg HMod.hMod h) 2
+    have := Int.ModEq.trans hm.right.symm one_mod
+    contradiction
+  . have two : n = 2 ∨ n = -2 := abs_eq_abs.mp two
+    cases two with
+    | inl two =>
+      rw [two] at hm
+      simp only [Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, div_self] at hm
+      apply Or.inr; apply Or.inl
+      rw [Subtype.ext_iff, Subring.coe_one R_subring]
+      exact hm.left
+    | inr mtwo =>
+      rw [mtwo] at hm
+      simp only [Int.reduceNeg, Int.cast_neg, Int.cast_ofNat, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, neg_div_self] at hm
+      apply Or.inr; apply Or.inr; apply Or.inl
+      rw [Subtype.ext_iff, Subring.coe_neg R_subring, Subring.coe_one R_subring, hm.left]
+      apply Complex.ext
+      repeat simp
+  . have one : n = 3 ∨ n = -3 := abs_eq_abs.mp three
+    have one_mod : n ≡ 1 [ZMOD 2] := by
+      apply one.elim
+      repeat
+        intro h
+        exact congr_fun (congr_arg HMod.hMod h) 2
+    have := Int.ModEq.trans hm.right.symm one_mod
+    contradiction
+  . have four : n = 4 ∨ n = -4 := abs_eq_abs.mp four
+    cases four with
+    | inl four =>
+      rw [four, Int.cast_ofNat] at hm
+      apply Or.inr; apply Or.inr; apply Or.inr; apply Or.inl
+      rw [←one_add_one_eq_two, Subtype.ext_iff, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
+      apply Complex.ext
+      . ring_nf
+        rfl
+      . simp
+    | inr mfour =>
+      rw [mfour] at hm
+      simp only [Int.reduceNeg, Int.cast_neg, Int.cast_ofNat] at hm
+      apply Or.inr; apply Or.inr; apply Or.inr; apply Or.inr
+      rw [←one_add_one_eq_two, Subtype.ext_iff, Subring.coe_neg R_subring, Subring.coe_add R_subring, Subring.coe_one R_subring, hm.left]
+      apply Complex.ext
+      . ring_nf
+        rfl
+      . simp
 
 @[simp] noncomputable def norm_5_pp : R := Subtype.mk ⟨1 / 2, √19 / 2⟩ (Exists.intro 1 (Exists.intro 1 (by simp)))
 @[simp] noncomputable def norm_5_mp : R := Subtype.mk ⟨-1 / 2, √19 / 2⟩ (Exists.intro (-1) (Exists.intro 1 (by simp; rfl)))
@@ -328,7 +304,6 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
 def norm_0_1 : Set R :=
   { 0, 1, -1 }
 
-@[simp]
 def norm_5_9 : Set R :=
   {
     norm_5_pp, norm_5_pm, norm_5_mp, norm_5_mm,
