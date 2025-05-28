@@ -328,6 +328,7 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
 def norm_0_1 : Set R :=
   { 0, 1, -1 }
 
+@[simp]
 def norm_5_9 : Set R :=
   {
     norm_5_pp, norm_5_pm, norm_5_mp, norm_5_mm,
@@ -336,55 +337,8 @@ def norm_5_9 : Set R :=
   }
 
 lemma norm_5_9_norm {x : norm_5_9} : Complex.normSq x ≤ 9 := by
-  have h := x.property
-  cases h with
-  | inl val =>
-    repeat (simp only [val, norm_5_pp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-    linarith
-  | inr h =>
-    cases h with
-    | inl val =>
-      repeat (simp only [val, norm_5_pm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-      linarith
-    | inr h =>
-      cases h with
-      | inl val =>
-        repeat (simp only [val, norm_5_mp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-        linarith
-      | inr h =>
-        cases h with
-        | inl val =>
-          repeat (simp only [val, norm_5_mm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-          linarith
-        | inr h =>
-          cases h with
-          | inl val =>
-            repeat (simp only [val, norm_7_pp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-            linarith
-          | inr h =>
-            cases h with
-            | inl val =>
-              repeat (simp only [val, norm_7_pm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-              linarith
-            | inr h =>
-              cases h with
-              | inl val =>
-                repeat (simp only [val, norm_7_mp, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-                linarith
-              | inr h =>
-                cases h with
-                | inl val =>
-                  repeat (simp only [val, norm_7_mm, one_div, Complex.normSq_mk, ge_iff_le, Nat.ofNat_nonneg, Real.sq_sqrt]; ring_nf)
-                  linarith
-                | inr h =>
-                  cases h with
-                  | inl val =>
-                    repeat (simp only [val, norm_9_m, Complex.normSq_mk, mul_neg, neg_mul, neg_neg, mul_zero, add_zero, ge_iff_le, le_refl]; ring_nf)
-                    linarith
-                  | inr val =>
-                    rw [val]
-                    repeat (simp only [norm_9_p, Complex.normSq_mk, mul_neg, neg_mul, neg_neg, mul_zero, add_zero, ge_iff_le, le_refl]; ring_nf)
-                    linarith
+  rcases x.property with h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁
+  all_goals (rw [h₁]; field_simp; linarith)
 
 @[simp]
 lemma norm_0_1_card : Nat.card norm_0_1 = 3 := by
