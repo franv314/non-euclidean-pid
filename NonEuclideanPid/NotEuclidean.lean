@@ -315,42 +315,27 @@ lemma norm_5_9_norm {x : norm_5_9} : Complex.normSq x ≤ 9 := by
   rcases x.property with h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁ | h₁
   all_goals (rw [h₁]; field_simp; linarith)
 
-@[simp]
-lemma norm_0_1_card : Nat.card norm_0_1 = 3 := by
-  rw [norm_0_1, Set.Nat.card_coe_set_eq]
-  simp only [Set.mem_insert_iff, zero_ne_one, Set.mem_singleton_iff, zero_eq_neg, one_ne_zero, or_self, not_false_eq_true, Set.finite_singleton, Set.Finite.insert, Set.ncard_insert_of_not_mem, Nat.reduceEqDiff]
-  apply Set.ncard_pair
-  rw [←Subtype.coe_ne_coe, Subring.coe_neg R_subring, Subring.coe_one R_subring]
-  norm_cast
-
 lemma neg_neq {a : ℝ} : a ≠ 0 → a ≠ -a := by
   intro h
   apply (Iff.ne (div_left_inj' h)).mp
   field_simp
   norm_cast
 
-lemma norm_5_9_card : Nat.card norm_5_9 = 10 := by
-  have ne₀ : ¬√19 = -√19 ↔ True := Iff.intro (λ _ => trivial) (λ _ => neg_neq (Real.sqrt_ne_zero'.mpr Nat.ofNat_pos'))
-  have ne₁ : (1 : ℝ) = -1 ↔ False := Iff.intro (by norm_cast) False.elim
-  have ne₂ : (1 : ℝ) = -3 ↔ False := Iff.intro (by norm_cast) False.elim
-  have ne₃ : (-1 : ℝ) = 3 ↔ False := Iff.intro (by norm_cast) False.elim
-  have ne₄ : (3 : ℝ) = -3 ↔ False := Iff.intro (by norm_cast) False.elim
+@[simp]
+lemma norm_0_1_card : Nat.card norm_0_1 = 3 := by
+  rw [norm_0_1, Set.Nat.card_coe_set_eq]
+  rw [Set.ncard_insert_of_not_mem (by simp), Set.ncard_pair]
+  rw [←Subtype.coe_ne_coe, Subring.coe_neg R_subring, Subring.coe_one R_subring]
+  norm_cast
 
+lemma norm_5_9_card : Nat.card norm_5_9 = 10 := by
+  have ne₀ : √19 ≠ -√19 := neg_neq (Real.sqrt_ne_zero'.mpr Nat.ofNat_pos')
   rw [norm_5_9, Set.Nat.card_coe_set_eq]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₁, ne₂])]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₁, ne₂])]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₃])]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₃])]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀, ne₄])]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₄])]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀])]
-  rw [Set.ncard_insert_of_not_mem (by field_simp)]
-  rw [Set.ncard_insert_of_not_mem (by field_simp [eq_comm, ne₄])]
+  repeat rw [Set.ncard_insert_of_not_mem (by field_simp [ne₀] <;> norm_cast)]
   simp
 
 instance : Finite norm_0_1 := by
-  apply Nat.finite_of_card_ne_zero
-  simp
+  simp [Nat.finite_of_card_ne_zero]
 
 theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor u := by
   apply not_exists.mpr
@@ -453,9 +438,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor u := by
               cases lt_or_ge (Complex.normSq q) 5 with
               | inl less =>
                 have poss := norm_less_five less
-                have poss := poss.resolve_left abs.left
-                have poss := poss.resolve_left abs.right.left
-                have poss := poss.resolve_left abs.right.right
+                simp only [abs, false_or] at poss
                 apply ge_of_eq
                 cases poss with
                 | inl two =>
@@ -535,9 +518,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor u := by
       linarith
     | inr four_or_less =>
       have poss := norm_less_five four_or_less
-      have poss := poss.resolve_left not_small.left
-      have poss := poss.resolve_left not_small.right.left
-      have poss := poss.resolve_left not_small.right.right
+      simp only [not_small, false_or] at poss
       let val : R := by
         apply Subtype.mk ⟨1 / 2, √19 / 2⟩
         apply Exists.intro 1
@@ -590,9 +571,7 @@ theorem no_usd_in_R : ¬ ∃ u : R, is_universal_side_divisor u := by
             . cases lt_or_le (Complex.normSq q) 5 with
               | inl less =>
                 have poss := norm_less_five less
-                have poss := poss.resolve_left abs.left
-                have poss := poss.resolve_left abs.right.left
-                have poss := poss.resolve_left abs.right.right
+                simp only [abs, false_or] at poss
                 . apply poss.elim
                   . intro h
                     conv_rhs => rw [h, ←one_add_one_eq_two, Subring.coe_add R_subring, Subring.coe_one R_subring]

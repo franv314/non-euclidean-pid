@@ -292,11 +292,10 @@ lemma odd_one_mod_eight {n : ℤ} : n ≡ 1 [ZMOD 2] → n ^ 2 ≡ 1 [ZMOD 8] :=
   have : 0 ≤ k := by omega
   have : k ≤ 7 := by omega
   interval_cases k
-  repeat
-  . by_contra
-    simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
-    omega
-  . simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
+  all_goals
+  by_contra
+  simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
+  try omega
 
 lemma even_zero_or_two_mod_four {n : ℤ} : n ≡ 0 [ZMOD 2] → (n ≡ 0 [ZMOD 4] ∨ n ≡ 2 [ZMOD 4]) := by
   intro h
@@ -304,10 +303,9 @@ lemma even_zero_or_two_mod_four {n : ℤ} : n ≡ 0 [ZMOD 2] → (n ≡ 0 [ZMOD 
   have : 0 ≤ k := by omega
   have : k ≤ 3 := by omega
   interval_cases k
-  repeat
-  . simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
-  . simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
-    omega
+  all_goals
+  simp_all [Int.ModEq, Int.pow_succ, Int.mul_emod]
+  try omega
 
 lemma sq_zero_mod_four_zero_mod_eight {n : ℤ} : n ≡ 0 [ZMOD 4] → n ^ 2 ≡ 0 [ZMOD 8] := by
   intro h

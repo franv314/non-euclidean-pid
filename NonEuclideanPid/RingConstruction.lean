@@ -179,9 +179,6 @@ instance R_commring : CommRing R :=
 instance : IsDomain R :=
   Subring.instIsDomainSubtypeMem R_subring
 
-instance : Nontrivial R :=
-  nontrivial_of_ne 0 1 zero_ne_one
-
 lemma sq_of_eq_mod_two_eq_mod_four {n m : ℤ} : n ≡ m [ZMOD 2] → n * n ≡ m * m [ZMOD 4] := by
   intro h
   simp_all only [Int.modEq_iff_dvd]
