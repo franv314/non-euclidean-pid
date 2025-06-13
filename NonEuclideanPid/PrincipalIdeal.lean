@@ -22,7 +22,7 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
     intro v
     apply Iff.intro
     . intro in_ideal
-      cases em (↑↑γ ∣ v) with
+      cases em (γ ∣ v) with
       | inl div =>
         rw [Submodule.mem_span_singleton]
         apply div.imp
@@ -30,48 +30,38 @@ theorem dedekind_hasse_domain_implies_pid [δ : DedekindHasseDomain α] : IsPrin
         rw [smul_eq_mul, mul_comm]
         exact hκ.symm
       | inr abs =>
-          have lin := δ.linear_comb hγ.left.left abs
-          apply lin.elim
-          intro s hs
-          apply hs.elim
-          intro t ht
+          have ⟨s, t, h⟩ := δ.linear_comb hγ.left.left abs
           let lin_comb : non_zero := by
-            apply Subtype.mk (s * ↑↑γ + t * v)
+            apply Subtype.mk (s * γ + t * v)
             apply And.intro
-            . rw [ne_eq]
-              by_contra abs
+            . by_contra abs
               apply (WellFounded.wellFounded_iff_no_descending_seq.mp δ.r_wellFounded).false
               apply Subtype.mk (λ _ => 0)
               intro
               conv in (occs := 2) 0 => rw [←abs]
-              exact ht.left
+              exact h.left
             . have := ideal.smul_mem' s hγ.left.right
               have := ideal.smul_mem' t in_ideal
               apply ideal.add_mem'
               repeat simpa
-          have := ht.right
+          have := h.right
           have := hγ.right lin_comb lin_comb.property
           contradiction
     . rw [Submodule.mem_span_singleton]
       intro in_span_γ
-      apply in_span_γ.elim
-      intro κ hκ
+      have ⟨κ, hκ⟩ := in_span_γ
       rw [←hκ]
       exact ideal.smul_mem' κ hγ.left.right
   | inr stupid =>
-    apply Exists.intro 0
+    rw [not_exists] at stupid
+    conv at stupid in ¬_ => rw [not_and', ne_eq, not_not]
+    exists 0
     rw [Ideal.submodule_span_eq]
     apply Ideal.ext
     intro v
     apply Iff.intro
     . intro in_id
-      apply Submodule.mem_span.mpr
-      intro p hp
-      have v_zero : v = 0 := by
-        by_contra abs
-        apply stupid
-        apply Exists.intro v
-        simpa [abs]
+      have v_zero : v = 0 := stupid v in_id
       simp [v_zero]
     . intro in_span_zero
       rw [eq_zero_of_zero_dvd (Ideal.mem_span_singleton.mp in_span_zero)]
@@ -85,24 +75,16 @@ theorem dh_rel_on_r_well_founded : WellFounded dh_rel_on_r := by
   apply WellFounded.wellFounded_iff_no_descending_seq.mpr
   by_contra abs
   simp only [dh_rel_on_r, not_isEmpty_iff, nonempty_subtype] at abs
-  apply abs.elim
-  intro f hf
-  let g : ℕ → ℕ := λ n => ⌊Complex.normSq (f n)⌋₊
-  have abs : ∀ n : ℕ, (g (n + 1)) < (g n) := by
-    intro n
-    have eq : ∀ n : ℕ, g n = Complex.normSq (f n) := by
-      intro x
-      apply (sq_norm_is_integer_on_R (f x)).elim
-      intro n hn
-      rw [hn, Nat.cast_inj]
-      calc
-        ⌊Complex.normSq (f x)⌋₊ = ⌊(n : ℝ)⌋₊ := by rw [hn]
-        _ = n := by simp
+  have ⟨f, hf⟩ := abs
+  have ⟨g', hg⟩ := Classical.skolem.mp sq_norm_is_integer_on_R
+  let g := g' ∘ f
+  have abs : ∀ n : ℕ, g (n + 1) < g n := by
+    simp [g]
     rify
-    rw [eq n, eq (n + 1)]
-    exact hf n
+    conv in _ < _ => rw [←hg, ←hg]
+    exact hf
   apply (WellFounded.wellFounded_iff_no_descending_seq.mp (Nat.lt_wfRel.wf)).false
-  exact Subtype.mk g abs
+  exact ⟨g, abs⟩
 
 lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
   ((u : ℂ) ≠ 0) →
@@ -113,54 +95,42 @@ lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
   intro nzero_c hh hk
   let s : R := by
     apply Subtype.mk (Complex.mk (-h / 2) (-k / 2 * √19))
-    apply Exists.intro (-h)
-    apply Exists.intro (-k)
+    exists -h, -k
     apply And.intro
     . simp only [Int.cast_neg, mul_neg, Complex.mk.injEq, true_and]
       ring_nf
     . have := hh.left
       simpa
-  apply Exists.intro s
+  exists s
   rw [dh_rel_on_r]
-  have eq1 : Complex.normSq u * Complex.normSq (s + t * v / u) = Complex.normSq (s * u + t * v : R) := calc
-    _ = Complex.normSq (u * (s + t * v / u)) := by rw [Complex.normSq_mul]
-    _ = _ := by
-      have eq : u * (s + t * v.val / u) = (s * u + t * v : R) := calc
-        u * (s + t *v.val / u) = s * u + t * v.val * u / u := by ring
-        _ = s * u + t * v.val * (u.val * u.val⁻¹) := by rw [div_eq_mul_inv, mul_assoc]
-        _ = s * u + t * v.val := by rw [Field.mul_inv_cancel u.val nzero_c]; simp
-        _ = (s * u + t * v : R) := rfl
-      rw [←eq]
+  have eq1 : Complex.normSq u * Complex.normSq (s + t * v / u) = Complex.normSq (s * u + t * v : R) := by
+    rw [←Complex.normSq_mul, mul_add, mul_comm]
+    conv in _ * (_ / _) => rw [mul_comm, div_eq_mul_inv, mul_assoc]
+    conv in (_⁻¹ * _) => rw [mul_comm, Field.mul_inv_cancel (u : ℂ) nzero_c]
+    simp [mul_one, Subring.coe_add R_subring, Subring.coe_mul R_subring]
   have eq2 : Complex.normSq u = Complex.normSq u * 1 := by simp
   rw [←eq1]
   conv_rhs => rw [eq2]
   apply mul_lt_mul_of_pos_left
-  . rw [Complex.normSq]
-    simp only [MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk, Complex.add_re, Complex.add_im]
-    have eq1 : s.val.re = -h / 2 := rfl
-    have eq2 : s.val.im = -k / 2 * √19 := rfl
-    rw [eq1, eq2]
+  . simp only [Complex.normSq, MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk, Complex.add_re, Complex.add_im]
+    rw [(rfl : s.val.re = - h / 2), (rfl : s.val.im = - k / 2 * √19)]
 
     let re_sq := ((t * v.val / u).re - ↑h / 2)
     let im_sq := (-↑k / 2 * √19 + (t * v.val / u).im)
     have eq3 : re_sq ^ 2 = (-↑h / 2 + (t * v.val / u).re) * (-↑h / 2 + (t * v.val / u).re) := by ring
-    have eq3' : re_sq = ((t * v.val / u).re - ↑h / 2)  := by ring
     have eq4 : im_sq ^ 2 = (-↑k / 2 * √19 + (t * v.val / u).im) * (-↑k / 2 * √19 + (t * v.val / u).im) := by ring
-    have eq4' : im_sq = (-↑k / 2 * √19 + (t * v.val / u).im) := by ring
     have eq5 : (1 / 2) ^ 2 + (√3 / 2) ^ 2 = 1 := by
-      simp only [one_div, inv_pow]
-      ring_nf
-      simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt]
-      ring_nf
+      field_simp
+      norm_cast
     rw [←eq3, ←eq4, ←eq5]
 
     apply add_lt_add_of_le_of_lt
     . have diseq : √(re_sq ^ 2) ≤ (1 / 2) := by
-        rw [Real.sqrt_sq_eq_abs, eq3']
+        simp only [Real.sqrt_sq_eq_abs, re_sq]
         exact hh.right
       exact (Real.sqrt_le_iff.mp diseq).right
     . have diseq : √(im_sq ^ 2) < (√3 / 2) := by
-        rw [Real.sqrt_sq_eq_abs, eq4']
+        simp only [Real.sqrt_sq_eq_abs, im_sq]
         apply abs_lt.mpr
         apply And.intro
         . rw [add_comm]
@@ -178,55 +148,37 @@ lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
       exact Real.lt_sq_of_sqrt_lt diseq
   . simpa
 
+lemma small_of_small_sum (x y : ℝ) : x + y ≤ 1 → x ≤ 1 / 2 ∨ y ≤ 1 / 2 := by
+  intro
+  by_contra abs
+  simp at abs
+  linarith
+
 lemma close_int (x : ℝ) : ∃ l : ℤ, |x - l| ≤ 1 / 2 := by
-    let l := ⌊x⌋
-    cases em (x - l ≤ 1 / 2) with
-    | inl hl =>
-      apply Exists.intro l
-      rw [abs_le]
-      apply And.intro
-      . simp only [one_div, neg_le_sub_iff_le_add]
-        apply le_add_of_le_of_nonneg
-        . exact Int.floor_le x
-        . exact inv_nonneg_of_nonneg zero_le_two
-      . simp only [one_div, tsub_le_iff_right] at hl
-        simpa
-    | inr hl =>
-      simp only [one_div, tsub_le_iff_right, not_le] at hl
-      apply Exists.intro (l + 1)
-      rw [abs_le]
-      apply And.intro
-      . simp only [one_div, Int.cast_add, Int.cast_one, neg_le_sub_iff_le_add]
-        apply le_of_lt
-        have th := add_lt_add_left hl (1 / 2)
-        ring_nf at th
-        simp at th
-        conv_lhs at th => rw [add_comm]
-        conv_rhs at th => rw [add_comm]
-        exact th
-      . simp only [Int.cast_add, Int.cast_one, one_div, tsub_le_iff_right]
-        ring_nf
-        by_contra abs
-        rw [not_le] at abs
-        have := calc
-          l + 1 ≥ (⌈x⌉ : ℝ) := by
-            have diseq := Int.ceil_le_floor_add_one x
-            rify at diseq
-            exact diseq
-          _ ≥ x := Int.le_ceil x
-          _ > (3 / 2) + ↑l := abs
-        linarith
+  have poss : |x - ⌊x⌋| ≤ 1 / 2 ∨ |x - ⌈x⌉| ≤ 1 / 2 := by
+    rw [abs_of_nonneg (sub_nonneg_of_le (Int.floor_le x))]
+    rw [abs_of_nonpos (tsub_nonpos.mpr (Int.le_ceil x))]
+    apply small_of_small_sum
+    calc
+      x - ↑⌊x⌋ + -(x - ↑⌈x⌉) = ⌈x⌉ - ⌊x⌋ := by ring
+      _ ≤ 1 := by
+        norm_cast
+        exact sub_left_le_of_le_add (Int.ceil_le_floor_add_one x)
+  apply poss.elim
+  . intro h
+    exists ⌊x⌋
+  . intro h
+    exists ⌈x⌉
 
 lemma real_part (x : ℝ) : ∀ k : ℤ, ∃ l : ℤ, l ≡ k [ZMOD 2] ∧ |x - l / 2| ≤ 1 / 2 := by
   intro k
   have th : ∀ x : ℝ, ∃ l : ℤ, l ≡ 0 [ZMOD 2] ∧ |x - l / 2| ≤ 1 / 2 := by
     intro x
-    apply (close_int x).elim
-    intro l hl
-    apply Exists.intro (2 * l)
+    have ⟨l, hl⟩ := close_int x
+    exists 2 * l
     apply And.intro
     . apply Int.modEq_iff_dvd.mpr
-      apply Exists.intro (-l)
+      exists -l
       simp
     . simp at hl
       simpa
@@ -238,9 +190,8 @@ lemma real_part (x : ℝ) : ∀ k : ℤ, ∃ l : ℤ, l ≡ k [ZMOD 2] ∧ |x - 
     . exact Int.ModEq.trans hk.left zero.symm
     . exact hk.right
   | inr one =>
-    apply (th (x - 1 / 2)).elim
-    intro k hk
-    apply Exists.intro (k + 1)
+    have ⟨k, hk⟩ := th (x - 1 / 2)
+    exists k + 1
     apply And.intro
     . exact Int.ModEq.trans (Int.ModEq.add_right 1 hk.left) one.symm
     . rify
@@ -309,21 +260,19 @@ lemma even_zero_or_two_mod_four {n : ℤ} : n ≡ 0 [ZMOD 2] → (n ≡ 0 [ZMOD 
 
 lemma sq_zero_mod_four_zero_mod_eight {n : ℤ} : n ≡ 0 [ZMOD 4] → n ^ 2 ≡ 0 [ZMOD 8] := by
   intro h
-  apply (Int.modEq_iff_dvd.mp h.symm).elim
-  intro k hk
+  have ⟨k, hk⟩ := Int.modEq_iff_dvd.mp h.symm
   rw [sub_zero] at hk
   rw [hk]
   apply Int.modEq_iff_dvd.mpr
-  apply Exists.intro (-2 * k ^ 2)
+  exists -2 * k ^ 2
   ring_nf
 
 lemma sq_two_mod_four_four_mod_eight {n : ℤ} : n ≡ 2 [ZMOD 4] → n ^ 2 ≡ 4 [ZMOD 8] := by
   intro h
-  apply (Int.modEq_iff_dvd.mp h.symm).elim
-  intro k hk
+  have ⟨k, hk⟩ := Int.modEq_iff_dvd.mp h.symm
   rw [Eq.symm (add_eq_of_eq_sub' (id (Eq.symm hk)))]
   apply Int.modEq_iff_dvd.mpr
-  apply Exists.intro (-2 * k ^ 2 - 2 * k)
+  exists (-2 * k ^ 2 - 2 * k)
   ring_nf
 
 theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s t : R, dh_rel_on_r 0 (s * u + t * v) ∧ dh_rel_on_r (s * u + t * v) u := by
@@ -335,18 +284,13 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
     contradiction
   cases em (∃ k : ℤ, k * √19 / 2 - √3 / 2 < (v.val / u.val).im ∧ (v.val / u.val).im < k * √19 / 2 + √3 / 2) with
   | inl in_strip =>
-    apply in_strip.elim
-    intro k hk
-    apply (real_part (v.val / u).re k).elim
-    intro h hh
+    have ⟨k, hk⟩ := in_strip
+    have ⟨h, hh⟩ := real_part (v.val / u).re k
     have eq : v.val = 1 * v.val := by simp
     rw [eq] at hh
     rw [eq] at hk
-    have lt := in_strip_low_distance 1 nzero_c hh hk
-    apply lt.elim
-    intro s hs
-    apply Exists.intro s
-    apply Exists.intro 1
+    have ⟨s, hs⟩ := in_strip_low_distance 1 nzero_c hh hk
+    exists s, 1
     refine And.intro ?_ hs
     simp only [dh_rel_on_r, one_mul]
     have is_zero : Complex.normSq (0 : R) = 0 := calc
@@ -356,7 +300,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
     simp only [Complex.normSq_pos, ne_eq]
     by_contra abs
     apply ndiv
-    apply Exists.intro (-s)
+    exists -s
     symm
     calc
       u * -s = u * -s + 0 := by simp
@@ -365,7 +309,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
   | inr not_in_strip =>
     have in_strip : ∃ k : ℤ, k * (√19 / 2) + √3 / 2 ≤ (v.val / u).im ∧ (v.val / u).im ≤ (k + 1) * (√19 / 2) - √3 / 2 := by
       let k := ⌊(v.val / u).im / (√19 / 2)⌋
-      apply Exists.intro k
+      exists k
       apply And.intro
       . by_contra abs
         rw [not_le] at abs
@@ -378,7 +322,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
           . exact div_nonneg (Real.sqrt_nonneg _) zero_le_two
         have lb : (v.val / u).im > k * (√19 / 2) - (√3 / 2) := add_lt_of_le_of_neg lb (neg_neg_of_pos (div_pos (Real.sqrt_pos.mpr zero_lt_three) zero_lt_two))
         apply not_in_strip
-        apply Exists.intro k
+        exists k
         apply And.intro
         . conv_rhs at lb => rw [div_eq_mul_inv, ←mul_assoc]
           exact lb
@@ -400,7 +344,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
           rify at diseq
           simpa
         apply not_in_strip
-        apply Exists.intro (k + 1)
+        exists k + 1
         rify
         apply And.intro
         . conv_lhs at abs => rw [div_eq_mul_inv]
@@ -408,9 +352,8 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
         . conv_rhs at ub => rw [div_eq_mul_inv]
           rwa [←mul_assoc, ←div_eq_mul_inv] at ub
     have in_strip' : ∃ k : ℤ, k * √19 / 2 - ((√19 - 2 * √3) / 2) ≤ (2 * v.val / u).im ∧ (2 * v.val / u).im ≤ k * √19 / 2 + ((√19 - 2 * √3) / 2) := by
-      apply in_strip.elim
-      intro k hk
-      apply Exists.intro (2 * k + 1)
+      have ⟨k, hk⟩ := in_strip
+      exists 2 * k + 1
       conv_lhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
       conv_rhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
       ring_nf at hk
@@ -434,19 +377,14 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
       apply And.intro
       . apply gt_of_ge_of_gt hk.left (by simpa)
       . apply lt_of_le_of_lt hk.right (by simpa)
-    apply in_strip''.elim
-    intro k hk
-    apply (real_part (2 * v.val / u).re k).elim
-    intro h hh
-    have lt := in_strip_low_distance 2 nzero_c hh hk
-    apply lt.elim
-    intro s hs
+    have ⟨k, hk⟩ := in_strip''
+    have ⟨h, hh⟩ := real_part (2 * v.val / u).re k
+    have ⟨s, hs⟩ := in_strip_low_distance 2 nzero_c hh hk
     cases em (s * u + 2 * v = 0) with
     | inl eq =>
       cases em ((s : ℂ) / 2 ∈ R) with
       | inl in_r =>
-        apply Exists.intro s
-        apply Exists.intro 2
+        exists s, 2
         refine And.intro ?_ hs
         rw [dh_rel_on_r]
         have is_zero : Complex.normSq (0 : R) = 0 := calc
@@ -462,7 +400,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
           rfl
         simp only [r, neg_mul, neg_div_neg_eq, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, mul_div_cancel_left₀] at eq
         let s' : R := -(Subtype.mk ((s : ℂ) / 2) in_r)
-        apply Exists.intro s'
+        exists s'
         ext
         calc
           _ = (s * u).val / -2 := eq.symm
@@ -470,21 +408,17 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
           _ = u.val * -(s.val / 2) := by ring
           _ = (u * s').val := by rfl
       | inr not_in_r =>
-        apply s.property.elim
-        intro n hn
-        apply hn.elim
-        intro m hm
+        have ⟨n, m, h⟩ := s.property
         let t' : R := by
           apply Subtype.mk ⟨(-n / 2), (√19 * m / 2)⟩
-          apply Exists.intro (-n)
-          apply Exists.intro (m)
+          exists -n, m
           simp only [Int.cast_neg, true_and]
           calc
             _ ≡ n [ZMOD 2] := by
               apply Int.modEq_iff_add_fac.mpr
-              apply Exists.intro n
+              exists n
               ring
-            n ≡ m [ZMOD 2] := hm.right
+            n ≡ m [ZMOD 2] := h.right
         let s'' := -⌊(t'.val * v.val / u).re⌋
         let s' := (s'' : R)
         have t'_eq : t'.val = ⟨(-n / 2), (√19 * m / 2)⟩ := rfl
@@ -501,14 +435,13 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
         have eq₂ : (t' * v.val / u).im = 0 := by
           rw [div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, eq']
           simp only [Complex.mul_im, Complex.div_ofNat_im, Complex.neg_im, Complex.div_ofNat_re, Complex.neg_re]
-          rw [(congr_arg Complex.re hm.left : s.val.re = n / 2)]
-          rw [(congr_arg Complex.im hm.left : s.val.im = √19 * m / 2)]
+          rw [(congr_arg Complex.re h.left : s.val.re = n / 2)]
+          rw [(congr_arg Complex.im h.left : s.val.im = √19 * m / 2)]
           rw [(rfl : t'.val.re = -n / 2)]
           rw [(rfl : t'.val.im = (√19 * m / 2))]
           ring_nf
         have eq₃ : s'' = -⌊(t'.val * v.val / u).re⌋ := rfl
-        apply Exists.intro s'
-        apply Exists.intro t'
+        exists s', t'
         apply And.intro
         . rw [dh_rel_on_r]
           have is_zero : Complex.normSq (0 : R) = 0 := calc
@@ -523,7 +456,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
             simp only [Complex.add_re, Complex.zero_re, ne_eq]
             have ne_zero_of_ne_zero_fract : ∀ a : ℝ, a = 0 → Int.fract a = 0 := λ a => λ ha => by rw[ha]; simp
             apply not_imp_not.mpr (ne_zero_of_ne_zero_fract ((s'.val + (t'.val * v / u)).re))
-            rw [Complex.add_re, eq₀, Int.fract_int_add s'' _, div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, eq', hm.left, t'_eq]
+            rw [Complex.add_re, eq₀, Int.fract_int_add s'' _, div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, eq', h.left, t'_eq]
             simp only [Complex.mul_re, Complex.div_ofNat_re, Complex.neg_re, Complex.div_ofNat_im, Complex.neg_im]
             ring_nf
             simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt]
@@ -535,16 +468,15 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
               | inl even =>
                 have e : n % 2 = 0 ↔ n ≡ 0 [ZMOD 2] := Eq.to_iff rfl
                 rw [e] at even
-                have meven := Int.ModEq.trans hm.right.symm even
+                have meven := Int.ModEq.trans h.right.symm even
                 cases even_zero_or_two_mod_four even with
                 | inl zeron =>
                   cases even_zero_or_two_mod_four meven with
                   | inl zerom =>
                     have : s.val / 2 ∈ R := by
-                      apply Exists.intro (n / 2)
-                      apply Exists.intro (m / 2)
+                      exists n / 2, m / 2
                       apply And.intro
-                      . rw [hm.left]
+                      . rw [h.left]
                         apply Complex.ext
                         . rw [Complex.div_ofNat_re, ←div_by_k_exact_on_mult n two_ne_zero even]
                           ring_nf
@@ -589,10 +521,9 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
                     contradiction
                   | inr twom =>
                     have : s.val / 2 ∈ R := by
-                      apply Exists.intro (n / 2)
-                      apply Exists.intro (m / 2)
+                      exists n / 2, m / 2
                       apply And.intro
-                      . rw [hm.left]
+                      . rw [h.left]
                         apply Complex.ext
                         . rw [Complex.div_ofNat_re, ←div_by_k_exact_on_mult n two_ne_zero even]
                           ring_nf
@@ -614,7 +545,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
               | inr odd =>
                 have e : n % 2 = 1 ↔ n ≡ 1 [ZMOD 2] := Eq.to_iff rfl
                 rw [e] at odd
-                have modd := Int.ModEq.trans hm.right.symm odd
+                have modd := Int.ModEq.trans h.right.symm odd
                 have eq1 := odd_one_mod_eight odd
                 have eq2 := odd_one_mod_eight modd
                 by_contra abs'
@@ -660,8 +591,7 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
             . exact zero_lt_one
           . simpa
     | inr neq =>
-      apply Exists.intro s
-      apply Exists.intro 2
+      exists s, 2
       refine And.intro ?_ hs
       rw [dh_rel_on_r]
       have is_zero : Complex.normSq (0 : R) = 0 := calc

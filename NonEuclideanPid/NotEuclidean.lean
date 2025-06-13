@@ -17,8 +17,7 @@ theorem euclidean_domain_has_usd {α : Type u} (δ : EuclideanDomain α) : (smal
   intro m hm
   refine And.intro hm.left ?_
   intro v
-  apply Exists.intro (δ.quotient v m)
-  apply Exists.intro (δ.remainder v m)
+  exists δ.quotient v m, δ.remainder v m
   apply And.intro
   . exact (δ.quotient_mul_add_remainder_eq v m).symm
   . have m_not_zero := (not_or.mp (Set.mem_def.mp hm.left)).left
@@ -30,10 +29,7 @@ lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x =
   apply Iff.intro
   . have eq : ‖x.val‖ = √(Complex.normSq x.val) := rfl
     rw [eq, Real.sqrt_eq_one]
-    apply x.property.elim
-    intro n hn
-    apply hn.elim
-    intro m hm
+    have ⟨n, m, hm⟩ := x.property
     rw [hm.left, Complex.normSq_mk]
     ring_nf
     simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt]
@@ -55,8 +51,7 @@ lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x =
     rw [m_zero] at h
     rw [m_zero] at hm
     simp only [one_div, Int.cast_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_mul, add_zero] at h
-    apply (Int.modEq_iff_dvd.mp hm.right).elim
-    intro k hk
+    have ⟨k, hk⟩ := Int.modEq_iff_dvd.mp hm.right
     rw [zero_sub] at hk
     rify at hk
     rw [←neg_pow_two, hk] at h
@@ -86,15 +81,12 @@ lemma norm_one_iff_one_or_minus_one {x : R} : ‖x.val‖ = 1 ↔ (x = 1 ∨ x =
 lemma invertible_iff_norm_one {x : R} : (∃ x' : R, x * x' = 1) ↔ ‖x.val‖ = 1 := by
   apply Iff.intro
   . intro h
-    apply h.elim
-    intro x' hx'
+    have ⟨x', hx'⟩ := h
     have hx' : (x * x').val = 1 := by rw [hx']; trivial
     have norm_eq := congr_arg Complex.normSq hx'
     rw [Subring.coe_mul R_subring, Complex.normSq_mul] at norm_eq
-    apply (sq_norm_is_integer_on_R x).elim
-    intro n hn
-    apply (sq_norm_is_integer_on_R x').elim
-    intro m hm
+    have ⟨n, hn⟩ := sq_norm_is_integer_on_R x
+    have ⟨m, hm⟩ := sq_norm_is_integer_on_R x'
     rw [hn, hm, map_one] at norm_eq
     norm_cast at norm_eq
     have eq : ‖x.val‖ = √(Complex.normSq x.val) := rfl
@@ -107,7 +99,7 @@ lemma invertible_iff_norm_one {x : R} : (∃ x' : R, x * x' = 1) ↔ ‖x.val‖
     apply h.elim
     repeat
       intro eq
-      apply Exists.intro x
+      exists x
       simp [eq]
 
 lemma ne_of_re_ne (a b : ℂ) : a.re ≠ b.re → a ≠ b := by
@@ -119,7 +111,7 @@ lemma ne_of_im_ne (a b : ℂ) : a.im ≠ b.im → a ≠ b := by
   exact h (congrArg Complex.im x)
 
 theorem not_all_small : (small R)ᶜ.Nonempty := by
-  apply Exists.intro 2
+  exists 2
   rw [Set.mem_compl_iff, Set.mem_def, small, not_or]
   apply And.intro
   . apply Subtype.coe_ne_coe.mp
@@ -135,7 +127,7 @@ theorem not_all_small : (small R)ᶜ.Nonempty := by
     . apply Subtype.coe_ne_coe.mp
       apply ne_of_re_ne ↑2 ↑(-1)
       norm_cast
-      
+
 lemma small_norm {u : R} : u = 0 ∨ u = 1 ∨ u = -1 → ‖u.val‖ ≤ 1 := by
   intro h
   rcases h with h₁ | h₁ | h₁
@@ -148,10 +140,7 @@ lemma less_four_is_zero_one_two_three_four {n : ℤ} : |n| ≤ 4 → (|n| = 0 �
 
 lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = -1 ∨ u = 2 ∨ u = -2 := by
   intro h
-  apply u.property.elim
-  intro n hn
-  apply hn.elim
-  intro m hm
+  have ⟨n, m, hm⟩ := u.property
   rw [hm.left, Complex.normSq_mk] at h
   ring_nf at h
   simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt] at h
@@ -279,18 +268,18 @@ lemma norm_less_five {u : R} : Complex.normSq u < 5 → u = 0 ∨ u = 1 ∨ u = 
         rfl
       . simp
 
-@[simp] noncomputable def norm_5_pp : R := Subtype.mk ⟨1 / 2, √19 / 2⟩ (Exists.intro 1 (Exists.intro 1 (by simp)))
-@[simp] noncomputable def norm_5_mp : R := Subtype.mk ⟨-1 / 2, √19 / 2⟩ (Exists.intro (-1) (Exists.intro 1 (by simp; rfl)))
-@[simp] noncomputable def norm_5_pm : R := Subtype.mk ⟨1 / 2, -√19 / 2⟩ (Exists.intro 1 (Exists.intro (-1) (by simp; rfl)))
-@[simp] noncomputable def norm_5_mm : R := Subtype.mk ⟨-1 / 2, -√19 / 2⟩ (Exists.intro (-1) (Exists.intro (-1) (by simp)))
+@[simp] noncomputable def norm_5_pp : R := Subtype.mk ⟨ 1 / 2,  √19 / 2⟩ ⟨ 1,  1, by simp⟩
+@[simp] noncomputable def norm_5_mp : R := Subtype.mk ⟨-1 / 2,  √19 / 2⟩ ⟨-1,  1, by simp; rfl⟩
+@[simp] noncomputable def norm_5_pm : R := Subtype.mk ⟨ 1 / 2, -√19 / 2⟩ ⟨ 1, -1, by simp; rfl⟩
+@[simp] noncomputable def norm_5_mm : R := Subtype.mk ⟨-1 / 2, -√19 / 2⟩ ⟨-1, -1, by simp⟩
 
-@[simp] noncomputable def norm_7_pp : R := Subtype.mk ⟨3 / 2, √19 / 2⟩ (Exists.intro 3 (Exists.intro 1 (by simp; rfl)))
-@[simp] noncomputable def norm_7_mp : R := Subtype.mk ⟨-3 / 2, √19 / 2⟩ (Exists.intro (-3) (Exists.intro 1 (by simp; rfl)))
-@[simp] noncomputable def norm_7_pm : R := Subtype.mk ⟨3 / 2, -√19 / 2⟩ (Exists.intro 3 (Exists.intro (-1) (by simp; rfl)))
-@[simp] noncomputable def norm_7_mm : R := Subtype.mk ⟨-3 / 2, -√19 / 2⟩ (Exists.intro (-3) (Exists.intro (-1) (by simp; rfl)))
+@[simp] noncomputable def norm_7_pp : R := Subtype.mk ⟨ 3 / 2,  √19 / 2⟩ ⟨ 3,  1, by simp; rfl⟩
+@[simp] noncomputable def norm_7_mp : R := Subtype.mk ⟨-3 / 2,  √19 / 2⟩ ⟨-3,  1, by simp; rfl⟩
+@[simp] noncomputable def norm_7_pm : R := Subtype.mk ⟨ 3 / 2, -√19 / 2⟩ ⟨ 3, -1, by simp; rfl⟩
+@[simp] noncomputable def norm_7_mm : R := Subtype.mk ⟨-3 / 2, -√19 / 2⟩ ⟨-3, -1, by simp; rfl⟩
 
-@[simp] noncomputable def norm_9_p : R := Subtype.mk ⟨3, 0⟩ (Exists.intro 6 (Exists.intro 0 (by ring_nf; simp ; rfl)))
-@[simp] noncomputable def norm_9_m : R := Subtype.mk ⟨-3, 0⟩ (Exists.intro (-6) (Exists.intro 0 (by ring_nf; simp ; rfl)))
+@[simp] noncomputable def norm_9_p : R := Subtype.mk ⟨ 3, 0⟩ ⟨ 6, 0, by ring_nf; simp; rfl⟩
+@[simp] noncomputable def norm_9_m : R := Subtype.mk ⟨-3, 0⟩ ⟨-6, 0, by ring_nf; simp; rfl⟩
 
 def norm_0_1 : Set R :=
   { 0, 1, -1 }
@@ -347,7 +336,7 @@ lemma norm_ge_10_not_usd {u : R} : Complex.normSq u ≥ 10 → ¬ is_universal_s
   intro more
   rw [not_usd]
   intro not_small
-  apply Exists.intro 2
+  exists 2
   intro q r h₁ h₂
   have h₁' : (2 : R).val - r.val = u.val * q.val := by
     rw [sub_eq_add_neg]
@@ -386,8 +375,7 @@ lemma norm_ge_10_not_usd {u : R} : Complex.normSq u ≥ 10 → ¬ is_universal_s
           . exact AbsoluteValue.nonneg Complex.abs ↑u
           . field_simp [Complex.sq_abs]
             exact more
-        . apply (sq_norm_is_integer_on_R q).elim
-          intro n hn
+        . have ⟨n, hn⟩ := sq_norm_is_integer_on_R q
           rw [Complex.abs]
           simp only [AbsoluteValue.coe_mk, MulHom.coe_mk, Real.one_le_sqrt]
           rw [hn]
@@ -411,14 +399,11 @@ lemma norm_ge_5_not_usd {u : R} : Complex.normSq u ≥ 5 → Complex.normSq u < 
   rw [is_universal_side_divisor] at abs
   have ex_div : ∀ x : norm_5_9, ∃ q r : norm_0_1, x = u * q + r := by
     intro v
-    apply (abs.right v).elim
-    intro q hq
-    apply hq.elim
-    intro r hr
-    rw [Set.mem_def, small, invertible_iff_norm_one, norm_one_iff_one_or_minus_one] at hr
+    have ⟨q, r, h⟩ := abs.right v
+    rw [Set.mem_def, small, invertible_iff_norm_one, norm_one_iff_one_or_minus_one] at h
     have small_r : r ∈ norm_0_1 := by
       simp [norm_0_1, Set.mem_insert, Set.mem_singleton]
-      exact hr.right
+      exact h.right
     have small_q : q ∈ norm_0_1 := by
       rw [Set.mem_def]
       have eq : ({0, 1, -1} : Set R) q ↔ q = 0 ∨ q = 1 ∨ q = -1 := Eq.to_iff rfl
@@ -455,14 +440,14 @@ lemma norm_ge_5_not_usd {u : R} : Complex.normSq u ≥ 5 → Complex.normSq u < 
         _ ≥ Complex.abs v + Complex.abs (-r) := by
           apply add_le_add (by rfl)
           rw [map_neg_eq_map]
-          exact small_norm hr.right
+          exact small_norm h.right
         _ ≥ Complex.abs (v + (-r)) := norm_add_le v.val.val (-r)
         _ = Complex.abs (v - r) := by ring_nf
         _ = Complex.abs (u * q) := by
           apply congr_arg Complex.abs
           rw [sub_eq_iff_eq_add, ←Subring.coe_mul R_subring, ←Subring.coe_add R_subring]
           apply Subtype.ext_iff.mp
-          exact hr.left
+          exact h.left
         _ = Complex.abs u * Complex.abs q := by simp
         _ ≥ √5 * √4 := by
           apply mul_le_mul
@@ -481,9 +466,8 @@ lemma norm_ge_5_not_usd {u : R} : Complex.normSq u ≥ 5 → Complex.normSq u < 
           . exact Real.sqrt_nonneg _
         _ = _ := Real.mul_self_sqrt zero_le_four
       linarith
-    apply Exists.intro (Subtype.mk q small_q)
-    apply Exists.intro (Subtype.mk r small_r)
-    exact hr.left
+    exists Subtype.mk q small_q, Subtype.mk r small_r
+    exact h.left
 
   have f : ∃ f : norm_5_9 → norm_0_1 × norm_0_1, Function.Injective f := by
     conv at ex_div in (∃ _, _) => rw [←Prod.exists']
@@ -509,10 +493,9 @@ lemma norm_lt_5_not_usd {u : R} : Complex.normSq u < 5 → ¬ is_universal_side_
   simp only [not_small, false_or] at poss
   let val : R := by
     apply Subtype.mk ⟨1 / 2, √19 / 2⟩
-    apply Exists.intro 1
-    apply Exists.intro 1
+    exists 1, 1
     simp
-  apply Exists.intro val
+  exists val
   intro q r h₁ h₂
   have h₁' : val.val - r.val = u.val * q.val := by
     rw [sub_eq_add_neg]
