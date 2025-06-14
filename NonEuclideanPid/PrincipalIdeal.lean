@@ -86,6 +86,16 @@ theorem dh_rel_on_r_well_founded : WellFounded dh_rel_on_r := by
   apply (WellFounded.wellFounded_iff_no_descending_seq.mp (Nat.lt_wfRel.wf)).false
   exact ⟨g, abs⟩
 
+lemma norm_frac (s t u v : R) :
+  u.val ≠ 0 →
+  Complex.normSq u * Complex.normSq (s + t * v / u) = Complex.normSq (s * u + t * v : R)
+:= by
+  intro nzero_c
+  rw [←Complex.normSq_mul, mul_add, mul_comm]
+  conv in _ * (_ / _) => rw [mul_comm, div_eq_mul_inv, mul_assoc]
+  conv in (_⁻¹ * _) => rw [mul_comm, Field.mul_inv_cancel (u : ℂ) nzero_c]
+  simp [mul_one, Subring.coe_add R_subring, Subring.coe_mul R_subring]
+
 lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
   ((u : ℂ) ≠ 0) →
   (h ≡ k [ZMOD 2] ∧ |(t * v.val / u).re - ↑h / 2| ≤ 1 / 2) →
@@ -103,13 +113,8 @@ lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
       simpa
   exists s
   rw [dh_rel_on_r]
-  have eq1 : Complex.normSq u * Complex.normSq (s + t * v / u) = Complex.normSq (s * u + t * v : R) := by
-    rw [←Complex.normSq_mul, mul_add, mul_comm]
-    conv in _ * (_ / _) => rw [mul_comm, div_eq_mul_inv, mul_assoc]
-    conv in (_⁻¹ * _) => rw [mul_comm, Field.mul_inv_cancel (u : ℂ) nzero_c]
-    simp [mul_one, Subring.coe_add R_subring, Subring.coe_mul R_subring]
   have eq2 : Complex.normSq u = Complex.normSq u * 1 := by simp
-  rw [←eq1]
+  rw [←norm_frac s t u v nzero_c]
   conv_rhs => rw [eq2]
   apply mul_lt_mul_of_pos_left
   . simp only [Complex.normSq, MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk, Complex.add_re, Complex.add_im]
@@ -143,7 +148,7 @@ lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
           exact tg
         . rw [neg_eq_neg_one_mul, div_eq_mul_inv, mul_assoc, mul_assoc, ←neg_eq_neg_one_mul, neg_add_eq_sub, ←div_eq_inv_mul]
           apply sub_lt_iff_lt_add.mpr
-          conv_rhs => rw [add_comm, div_eq_mul_inv, ←mul_assoc]
+          conv_rhs => rw [add_comm, mul_div_assoc']
           exact hk.right
       exact Real.lt_sq_of_sqrt_lt diseq
   . simpa
@@ -200,7 +205,7 @@ lemma real_part (x : ℝ) : ∀ k : ℤ, ∃ l : ℤ, l ≡ k [ZMOD 2] ∧ |x - 
       ring_nf at tg
       exact tg
 
-lemma fract_not_zero_of_mod_not_zero (a b : ℤ) : b > 0 → ¬ a ≡ 0 [ZMOD b] → ¬Int.fract ((a : ℝ) / b) = 0 := by
+lemma fract_not_zero_of_mod_not_zero {a b : ℤ} : b > 0 → ¬ a ≡ 0 [ZMOD b] → ¬Int.fract ((a : ℝ) / b) = 0 := by
   intro pos neq
   have pos_r : (b : ℝ) > 0 := by norm_cast
   have nzero_r : (b : ℝ) ≠ 0 := by
@@ -210,7 +215,7 @@ lemma fract_not_zero_of_mod_not_zero (a b : ℤ) : b > 0 → ¬ a ≡ 0 [ZMOD b]
   push_cast
   have eq₀ : Int.euclideanDomain.quotient = (· / ·) := rfl
   have eq₁ : Int.euclideanDomain.remainder = (· % ·) := rfl
-  rw [eq₀, eq₁, ←ne_eq, add_div, mul_comm, div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, div_self nzero_r, mul_one, Int.fract_int_add, ne_eq]
+  rw [eq₀, eq₁, ←ne_eq, add_div, mul_comm, mul_div_assoc, div_self nzero_r, mul_one, Int.fract_int_add, ne_eq]
   apply ne_of_gt
   apply Int.fract_pos.mpr
   have rhs_zero : ⌊((a % b) : ℝ) / b⌋ = 0 := by
@@ -232,10 +237,10 @@ lemma fract_not_zero_of_mod_not_zero (a b : ℤ) : b > 0 → ¬ a ≡ 0 [ZMOD b]
   norm_cast at th
   norm_cast
 
-lemma fract_not_zero_of_mod_not_zero_q (a b : ℤ) : b > 0 → ¬ a ≡ 0 [ZMOD b] → ¬Int.fract (Rat.divInt a b) = 0 := by
+lemma fract_not_zero_of_mod_not_zero_q {a b : ℤ} : b > 0 → ¬ a ≡ 0 [ZMOD b] → ¬Int.fract (Rat.divInt a b) = 0 := by
   intro pos neq
   rify
-  exact fract_not_zero_of_mod_not_zero a b pos neq
+  exact fract_not_zero_of_mod_not_zero pos neq
 
 lemma odd_one_mod_eight {n : ℤ} : n ≡ 1 [ZMOD 2] → n ^ 2 ≡ 1 [ZMOD 8] := by
   intro h
@@ -275,14 +280,235 @@ lemma sq_two_mod_four_four_mod_eight {n : ℤ} : n ≡ 2 [ZMOD 4] → n ^ 2 ≡ 
   exists (-2 * k ^ 2 - 2 * k)
   ring_nf
 
+@[simp]
+lemma strip_diseq : (√19 - 2 * √3) / 2 < √3 / 2 := by
+  cancel_denoms
+  apply sub_right_lt_of_lt_add
+  refine (Real.sqrt_lt' ?_).mpr ?_
+  . ring_nf
+    exact mul_pos (Real.sqrt_pos_of_pos three_pos) three_pos
+  . ring_nf
+    simp
+    norm_cast
+
+lemma twice_in_strip {x : ℝ} :
+(¬∃ k : ℤ, x ∈ Set.Ioo (↑k * √19 / 2 - √3 / 2) (↑k * √19 / 2 + √3 / 2)) →
+(∃ k : ℤ, 2 * x ∈ Set.Ioo (k * √19 / 2 - √3 / 2) (k * √19 / 2 + √3 / 2)) := by
+  intro not_in_strip
+  have in_strip : ∃ k : ℤ, x ∈ Set.Icc (k * (√19 / 2) + √3 / 2) ((k + 1) * (√19 / 2) - √3 / 2) := by
+    let k := ⌊x / (√19 / 2)⌋
+    exists k
+    apply And.intro
+    . by_contra abs
+      rw [not_le] at abs
+      have lb : x ≥ (x / (√19 / 2)) * (√19 / 2) := by
+        simp
+      have lb : x ≥ ⌊x / (√19 / 2)⌋ * (√19 / 2) := by
+        refine ge_trans lb ?_
+        apply mul_le_mul_of_nonneg_right
+        . exact Int.floor_le _
+        . exact div_nonneg (Real.sqrt_nonneg _) zero_le_two
+      have lb : x > k * (√19 / 2) - (√3 / 2) := add_lt_of_le_of_neg lb (neg_neg_of_pos (div_pos (Real.sqrt_pos.mpr zero_lt_three) zero_lt_two))
+      apply not_in_strip
+      exists k
+      apply And.intro
+      . conv_rhs at lb => rw [mul_div_assoc']
+        exact lb
+      . conv_rhs at abs => rw [mul_div_assoc']
+        exact abs
+    . by_contra abs
+      rw [not_le] at abs
+      have ub : x ≤ (x / (√19 / 2)) * (√19 / 2) := by simp
+      have ub : x ≤ ⌈x/ (√19 / 2)⌉ * (√19 / 2) := by
+        apply le_trans
+        . exact ub
+        . apply mul_le_mul_of_nonneg_right
+          . exact Int.le_ceil _
+          . exact div_nonneg (Real.sqrt_nonneg _) zero_le_two
+      have ub : x < ⌈x / (√19 / 2)⌉ * (√19 / 2) + (√3 / 2) := lt_add_of_le_of_pos ub (div_pos (Real.sqrt_pos.mpr zero_lt_three) zero_lt_two)
+      have ub : x < (k + 1) * (√19 / 2) + (√3 / 2) := by
+        refine gt_of_ge_of_gt ?_ ub
+        have diseq := Int.ceil_le_floor_add_one (x / (√19 / 2))
+        rify at diseq
+        simpa
+      apply not_in_strip
+      exists k + 1
+      apply And.intro
+      . rw [mul_div_assoc'] at abs
+        norm_cast at abs
+      . rw [←mul_div_assoc] at ub
+        norm_cast at ub
+  have in_strip' : ∃ k : ℤ, 2 * x ∈ Set.Icc (k * √19 / 2 - ((√19 - 2 * √3) / 2)) (k * √19 / 2 + ((√19 - 2 * √3) / 2)) := by
+    have ⟨k, hk⟩ := in_strip
+    exists 2 * k + 1
+    rw [Set.mem_Icc] at hk
+    conv_lhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
+    conv_rhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
+    ring_nf at hk
+    norm_cast at hk
+    push_cast
+    ring_nf
+    exact hk
+  have in_strip'' : ∃ k : ℤ, 2 * x ∈ Set.Ioo (k * √19 / 2 - √3 / 2) (k * √19 / 2 + √3 / 2) := by
+    apply in_strip'.imp
+    intro k hk
+    rw [Set.mem_Icc] at hk
+    apply And.intro
+    . apply gt_of_ge_of_gt hk.left (by simp)
+    . apply lt_of_le_of_lt hk.right (by simp)
+  exact in_strip''
+
+lemma special_case_subcases {s : R} {n m : ℤ} :
+  s.val / 2 ∉ R →
+  s.val = ⟨n / 2, √19 * m / 2⟩ ∧ n ≡ m [ZMOD 2] →
+  (
+    (n ≡ 1 [ZMOD 2] ∧ m ≡ 1 [ZMOD 2]) ∨
+    (n ≡ 0 [ZMOD 4] ∧ m ≡ 2 [ZMOD 4]) ∨
+    (n ≡ 2 [ZMOD 4] ∧ m ≡ 0 [ZMOD 4])
+  )
+:= by
+  intro not_int_r eq
+  rw [or_iff_not_imp_left]
+  intro not_odd
+  have eq' : m ≡ 1 [ZMOD 2] ↔ n ≡ 1 [ZMOD 2] := by
+    apply Iff.intro
+    . exact λ h => Int.ModEq.trans eq.right h
+    . exact λ h => Int.ModEq.trans eq.right.symm h
+  simp only [eq', and_self] at not_odd
+  have n_even : n ≡ 0 [ZMOD 2] := (Int.emod_two_eq_zero_or_one n).resolve_right not_odd
+  have m_even : m ≡ 0 [ZMOD 2] := Int.ModEq.trans eq.right.symm n_even
+
+  apply (even_zero_or_two_mod_four n_even).elim
+  all_goals apply (even_zero_or_two_mod_four m_even).elim
+  case left.right =>
+    intro hm hn
+    exact Or.inl ⟨hn, hm⟩
+  case right.left =>
+    intro hm hn
+    exact Or.inr ⟨hn, hm⟩
+  case left.left | right.right =>
+    intro hm hn
+    have : s.val / 2 ∈ R := by
+      exists n / 2, m / 2
+      rw [←div_by_k_exact_on_mult n two_ne_zero n_even]
+      rw [←div_by_k_exact_on_mult m two_ne_zero m_even]
+      apply And.intro
+      . apply Complex.ext
+        repeat simp [eq]; cancel_denoms
+      . have rn : ∀ n : ℤ, n ≡ 0 [ZMOD 2] → (n / 2) * 2 = n := by
+          intro n hn
+          rify
+          rw [←div_by_k_exact_on_mult n two_ne_zero hn]
+          simp
+        have abs : (n / 2) * 2 ≡ (m / 2) * 2 [ZMOD 4] := by
+          rw [rn n n_even, rn m m_even]
+          exact Int.ModEq.trans hn hm.symm
+        exact Int.ModEq.cancel_right_div_gcd zero_lt_four abs
+    contradiction
+
+lemma special_case {u v : R} (s : ↑R) :
+  u.val ≠ 0 →
+  s * u + 2 * v = 0 →
+  s.val / 2 ∉ R →
+  ∃ s t, dh_rel_on_r 0 (s * u + t * v) ∧ dh_rel_on_r (s * u + t * v) u
+:= by
+  intro nzero_c eq not_in_r
+  have ⟨n, m, h⟩ := s.property
+  let t' : R := by
+    apply Subtype.mk ⟨(-n / 2), (√19 * m / 2)⟩
+    exists -n, m
+    simp only [Int.cast_neg, true_and]
+    refine Int.ModEq.trans ?_ h.right
+    apply Int.modEq_iff_add_fac.mpr
+    exists n
+    ring
+  let s'' := -⌊(t'.val * v.val / u).re⌋
+  let s' := (s'' : R)
+  have eq' : v.val / u = -s / 2 := by
+    field_simp
+    rw [eq_neg_iff_add_eq_zero, add_comm]
+    conv in v.val * 2 =>
+      rw [←one_add_one_eq_two, ←Subring.coe_one R_subring, ←Subring.coe_add R_subring, one_add_one_eq_two, mul_comm]
+    rw [←Subring.coe_mul R_subring, ←Subring.coe_mul R_subring, ←Subring.coe_add R_subring]
+    norm_cast
+  have eq₀ : s'.val.re = s'' := rfl
+  have eq₁ : s'.val.im = 0 := rfl
+  have eq₂ : (t' * v.val / u).im = 0 := by
+    rw [mul_div_assoc, eq']
+    simp only [Complex.mul_im, Complex.div_ofNat_im, Complex.neg_im, Complex.div_ofNat_re, Complex.neg_re]
+    rw [(congr_arg Complex.re h.left : s.val.re = n / 2)]
+    rw [(congr_arg Complex.im h.left : s.val.im = √19 * m / 2)]
+    rw [(rfl : t'.val.re = -n / 2)]
+    rw [(rfl : t'.val.im = (√19 * m / 2))]
+    ring_nf
+  exists s', t'
+  apply And.intro
+  . rw [dh_rel_on_r]
+    have is_zero : Complex.normSq (0 : R) = 0 := by
+      simp [Subring.coe_zero R_subring]
+    rw [is_zero, Complex.normSq_pos, ne_eq]
+    have th : (s'.val * u + t' * v) / u ≠ 0 := by
+      rw [add_div, mul_div_assoc, div_self nzero_c, mul_one, ne_eq]
+      apply ne_of_apply_ne Complex.re
+      simp only [Complex.add_re, Complex.zero_re, ne_eq]
+      have ne_zero_of_ne_zero_fract : ∀ a : ℝ, a = 0 → Int.fract a = 0 := λ a => λ ha => by simp [ha]
+      apply not_imp_not.mpr (ne_zero_of_ne_zero_fract ((s'.val + (t'.val * v / u)).re))
+      simp only [Complex.add_re, eq₀, Int.fract_int_add s'', mul_div_assoc, eq', h.left, t']
+      simp only [Complex.mul_re, Complex.div_ofNat_re, Complex.neg_re, Complex.div_ofNat_im, Complex.neg_im]
+      ring_nf
+      simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt]
+      rw [←right_distrib, ←div_eq_mul_inv]
+      norm_cast
+      apply fract_not_zero_of_mod_not_zero_q
+      . exact Int.sign_eq_one_iff_pos.mp rfl
+      . rcases special_case_subcases not_in_r h with ⟨odd, modd⟩ | ⟨zeron, twom⟩ | ⟨twon, zerom⟩
+        . have eq1 := odd_one_mod_eight odd
+          have eq2 := odd_one_mod_eight modd
+          intro abs'
+          have abs : n ^ 2 + 19 * m ^ 2 ≡ 1 + 19 [ZMOD 8] := by
+            apply Int.ModEq.add
+            . exact eq1
+            . exact Int.ModEq.mul_left 19 eq2
+          have := Int.ModEq.trans abs.symm abs'
+          contradiction
+        . intro abs'
+          have abs : n ^ 2 + 19 * m ^ 2 ≡ 0 + 76 [ZMOD 8] := by
+            apply Int.ModEq.add
+            . exact sq_zero_mod_four_zero_mod_eight zeron
+            . exact Int.ModEq.mul_left 19 (sq_two_mod_four_four_mod_eight twom)
+          have := Int.ModEq.trans abs.symm abs'
+          contradiction
+        . intro abs'
+          have abs : n ^ 2 + 19 * m ^ 2 ≡ 4 + 0 [ZMOD 8] := by
+            apply Int.ModEq.add
+            . exact sq_two_mod_four_four_mod_eight twon
+            . exact Int.ModEq.mul_left 19 (sq_zero_mod_four_zero_mod_eight zerom)
+          have := Int.ModEq.trans abs.symm abs'
+          contradiction
+    exact (div_ne_zero_iff.mp th).left
+  . rw [dh_rel_on_r]
+    have eq2 : Complex.normSq u = Complex.normSq u * 1 := by simp
+    rw [←norm_frac s' t' u v nzero_c]
+    conv_rhs => rw [eq2]
+    refine mul_lt_mul_of_pos_left ?_ (by simpa)
+    rw [Complex.normSq]
+    simp only [MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk, Complex.add_re, Complex.add_im]
+    simp only [eq₀, eq₁, eq₂, add_zero, mul_zero, s'']
+    rw [(by simp : (1 : ℝ) = 1 * 1)]
+    push_cast
+    rw [neg_add_eq_sub]
+    apply mul_lt_mul_of_nonneg
+    repeat
+      rw [sub_lt_comm]
+      exact Int.sub_one_lt_floor (t' * v.val / u).re
+    repeat
+      exact sub_nonneg_of_le (Int.floor_le _)
+
 theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s t : R, dh_rel_on_r 0 (s * u + t * v) ∧ dh_rel_on_r (s * u + t * v) u := by
   intro nzero ndiv
   have nzero_c : (u : ℂ) ≠ 0 := by
-    intro abs
-    apply nzero
-    have : u = 0 := Subtype.ext abs
-    contradiction
-  cases em (∃ k : ℤ, k * √19 / 2 - √3 / 2 < (v.val / u.val).im ∧ (v.val / u.val).im < k * √19 / 2 + √3 / 2) with
+    rwa [←Subring.coe_zero R_subring, Subtype.coe_ne_coe]
+  cases em (∃ k : ℤ, (v.val / u.val).im ∈ Set.Ioo (k * √19 / 2 - √3 / 2) (k * √19 / 2 + √3 / 2)) with
   | inl in_strip =>
     have ⟨k, hk⟩ := in_strip
     have ⟨h, hh⟩ := real_part (v.val / u).re k
@@ -292,104 +518,32 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
     have ⟨s, hs⟩ := in_strip_low_distance 1 nzero_c hh hk
     exists s, 1
     refine And.intro ?_ hs
-    simp only [dh_rel_on_r, one_mul]
-    have is_zero : Complex.normSq (0 : R) = 0 := calc
-      _ = Complex.normSq (0 : ℂ) := rfl
-      _ = 0 := by simp
-    rw [is_zero]
-    simp only [Complex.normSq_pos, ne_eq]
-    by_contra abs
+    simp only [dh_rel_on_r, Subring.coe_zero R_subring, map_zero, one_mul, Complex.normSq_pos, ne_eq]
+    intro abs
+    rw [←Subring.coe_zero R_subring, SetCoe.ext_iff] at abs
     apply ndiv
     exists -s
-    symm
-    calc
-      u * -s = u * -s + 0 := by simp
-      _ = u * -s + (s * u + v) := by rw [(Subtype.ext abs : s * u + v = 0)]
-      _ = _ := by ring
+    rw [←mul_neg_one, ←mul_assoc, mul_neg_one]
+    apply eq_neg_of_add_eq_zero_left
+    rwa [add_comm, mul_comm]
   | inr not_in_strip =>
-    have in_strip : ∃ k : ℤ, k * (√19 / 2) + √3 / 2 ≤ (v.val / u).im ∧ (v.val / u).im ≤ (k + 1) * (√19 / 2) - √3 / 2 := by
-      let k := ⌊(v.val / u).im / (√19 / 2)⌋
-      exists k
-      apply And.intro
-      . by_contra abs
-        rw [not_le] at abs
-        have lb : (v.val / u).im ≥ ((v.val / u).im / (√19 / 2)) * (√19 / 2) := by
-          simp
-        have lb : (v.val / u).im ≥ ⌊(v.val / u).im / (√19 / 2)⌋ * (√19 / 2) := by
-          refine ge_trans lb ?_
-          apply mul_le_mul_of_nonneg_right
-          . exact Int.floor_le _
-          . exact div_nonneg (Real.sqrt_nonneg _) zero_le_two
-        have lb : (v.val / u).im > k * (√19 / 2) - (√3 / 2) := add_lt_of_le_of_neg lb (neg_neg_of_pos (div_pos (Real.sqrt_pos.mpr zero_lt_three) zero_lt_two))
-        apply not_in_strip
-        exists k
-        apply And.intro
-        . conv_rhs at lb => rw [div_eq_mul_inv, ←mul_assoc]
-          exact lb
-        . conv_rhs at abs => rw [div_eq_mul_inv, ←mul_assoc]
-          exact abs
-      . by_contra abs
-        rw [not_le] at abs
-        have ub : (v.val / u).im ≤ ((v.val / u).im / (√19 / 2)) * (√19 / 2) := by simp
-        have ub : (v.val / u).im ≤ ⌈(v.val / u).im / (√19 / 2)⌉ * (√19 / 2) := by
-          apply le_trans
-          . exact ub
-          . apply mul_le_mul_of_nonneg_right
-            . exact Int.le_ceil _
-            . exact div_nonneg (Real.sqrt_nonneg _) zero_le_two
-        have ub : (v.val / u).im < ⌈(v.val / u).im / (√19 / 2)⌉ * (√19 / 2) + (√3 / 2) := lt_add_of_le_of_pos ub (div_pos (Real.sqrt_pos.mpr zero_lt_three) zero_lt_two)
-        have ub : (v.val / u).im < (k + 1) * (√19 / 2) + (√3 / 2) := by
-          refine gt_of_ge_of_gt ?_ ub
-          have diseq := Int.ceil_le_floor_add_one ((v.val / u).im / (√19 / 2))
-          rify at diseq
-          simpa
-        apply not_in_strip
-        exists k + 1
-        rify
-        apply And.intro
-        . conv_lhs at abs => rw [div_eq_mul_inv]
-          rwa [←mul_assoc, ←div_eq_mul_inv] at abs
-        . conv_rhs at ub => rw [div_eq_mul_inv]
-          rwa [←mul_assoc, ←div_eq_mul_inv] at ub
-    have in_strip' : ∃ k : ℤ, k * √19 / 2 - ((√19 - 2 * √3) / 2) ≤ (2 * v.val / u).im ∧ (2 * v.val / u).im ≤ k * √19 / 2 + ((√19 - 2 * √3) / 2) := by
-      have ⟨k, hk⟩ := in_strip
-      exists 2 * k + 1
-      conv_lhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
-      conv_rhs at hk => rw [←mul_le_mul_iff_of_pos_left zero_lt_two]
-      ring_nf at hk
-      rw [←Complex.im_mul_ofReal] at hk
-      norm_cast at hk
-      push_cast
-      ring_nf
-      exact hk
-    have strip_diseq : (√19 - 2 * √3) / 2 < √3 / 2 := by
-      refine div_lt_div_of_pos_right ?_ zero_lt_two
-      rw [sub_lt_iff_lt_add]
-      refine (Real.sqrt_lt' ?_).mpr ?_
-      . ring_nf
-        exact mul_pos (Real.sqrt_pos.mpr zero_lt_three) zero_lt_three
-      . ring_nf
-        simp only [Nat.ofNat_nonneg, Real.sq_sqrt]
-        norm_cast
-    have in_strip'' : ∃ k : ℤ, k * √19 / 2 - √3 / 2 < (2 * v.val / u).im ∧ (2 * v.val / u).im < k * √19 / 2 + √3 / 2 := by
-      apply in_strip'.imp
-      intro k hk
-      apply And.intro
-      . apply gt_of_ge_of_gt hk.left (by simpa)
-      . apply lt_of_le_of_lt hk.right (by simpa)
+    have in_strip'' : ∃ k : ℤ, (2 * v.val / u).im ∈ Set.Ioo (k * √19 / 2 - √3 / 2) (k * √19 / 2 + √3 / 2) := by
+      have := twice_in_strip not_in_strip
+      rw [mul_div_assoc, Complex.mul_im]
+      simpa
     have ⟨k, hk⟩ := in_strip''
     have ⟨h, hh⟩ := real_part (2 * v.val / u).re k
     have ⟨s, hs⟩ := in_strip_low_distance 2 nzero_c hh hk
-    cases em (s * u + 2 * v = 0) with
-    | inl eq =>
-      cases em ((s : ℂ) / 2 ∈ R) with
-      | inl in_r =>
-        exists s, 2
-        refine And.intro ?_ hs
-        rw [dh_rel_on_r]
-        have is_zero : Complex.normSq (0 : R) = 0 := calc
-          _ = Complex.normSq (0 : ℂ) := rfl
-          _ = 0 := by simp
+    cases em (s * u + 2 * v ≠ 0 ∨ (s : ℂ) / 2 ∈ R) with
+    | inl normal =>
+      exists s, 2
+      refine And.intro ?_ hs
+      rw [dh_rel_on_r]
+      have is_zero : Complex.normSq (0 : R) = 0 := by
+        simp [Subring.coe_zero R_subring]
+      cases em (s * u + 2 * v = 0) with
+      | inl eq =>
+        have in_r := normal.resolve_left (not_ne_iff.mpr eq)
         simp only [is_zero, Complex.normSq_pos, ne_eq]
         by_contra abs
         apply ndiv
@@ -407,198 +561,12 @@ theorem dh_rel_on_r_linear_comb {u v : R} : (u ≠ 0) → ¬(u ∣ v) → ∃ s 
           _ = (s.val * u.val) / -2 := rfl
           _ = u.val * -(s.val / 2) := by ring
           _ = (u * s').val := by rfl
-      | inr not_in_r =>
-        have ⟨n, m, h⟩ := s.property
-        let t' : R := by
-          apply Subtype.mk ⟨(-n / 2), (√19 * m / 2)⟩
-          exists -n, m
-          simp only [Int.cast_neg, true_and]
-          calc
-            _ ≡ n [ZMOD 2] := by
-              apply Int.modEq_iff_add_fac.mpr
-              exists n
-              ring
-            n ≡ m [ZMOD 2] := h.right
-        let s'' := -⌊(t'.val * v.val / u).re⌋
-        let s' := (s'' : R)
-        have t'_eq : t'.val = ⟨(-n / 2), (√19 * m / 2)⟩ := rfl
-        have eq' : v.val / u = -s / 2 := by
-          field_simp
-          rw [eq_neg_iff_add_eq_zero, add_comm]
-          apply Eq.symm
-          calc
-            (0 : R).val = (s * u + 2 * v).val := by rw[←eq.symm]
-            _ = (s * u + v * 2).val := by ring_nf
-            _ = s.val * u.val + v.val * 2 := rfl
-        have eq₀ : s'.val.re = s'' := rfl
-        have eq₁ : s'.val.im = 0 := rfl
-        have eq₂ : (t' * v.val / u).im = 0 := by
-          rw [div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, eq']
-          simp only [Complex.mul_im, Complex.div_ofNat_im, Complex.neg_im, Complex.div_ofNat_re, Complex.neg_re]
-          rw [(congr_arg Complex.re h.left : s.val.re = n / 2)]
-          rw [(congr_arg Complex.im h.left : s.val.im = √19 * m / 2)]
-          rw [(rfl : t'.val.re = -n / 2)]
-          rw [(rfl : t'.val.im = (√19 * m / 2))]
-          ring_nf
-        have eq₃ : s'' = -⌊(t'.val * v.val / u).re⌋ := rfl
-        exists s', t'
-        apply And.intro
-        . rw [dh_rel_on_r]
-          have is_zero : Complex.normSq (0 : R) = 0 := calc
-            _ = Complex.normSq (0 : ℂ) := rfl
-            _ = 0 := by simp
-          rw [is_zero, Complex.normSq_pos, ne_eq]
-          have eq : (s' * u + t' * v).val = (s'.val * u.val + t'.val * v.val) := rfl
-          rw [eq]
-          have th : (s'.val * u + t' * v) / u ≠ 0 := by
-            rw [add_div, div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, div_self nzero_c, mul_one, ne_eq]
-            apply ne_of_apply_ne Complex.re
-            simp only [Complex.add_re, Complex.zero_re, ne_eq]
-            have ne_zero_of_ne_zero_fract : ∀ a : ℝ, a = 0 → Int.fract a = 0 := λ a => λ ha => by rw[ha]; simp
-            apply not_imp_not.mpr (ne_zero_of_ne_zero_fract ((s'.val + (t'.val * v / u)).re))
-            rw [Complex.add_re, eq₀, Int.fract_int_add s'' _, div_eq_mul_inv, mul_assoc, ←div_eq_mul_inv, eq', h.left, t'_eq]
-            simp only [Complex.mul_re, Complex.div_ofNat_re, Complex.neg_re, Complex.div_ofNat_im, Complex.neg_im]
-            ring_nf
-            simp only [one_div, Nat.ofNat_nonneg, Real.sq_sqrt]
-            rw [←right_distrib, ←div_eq_mul_inv]
-            norm_cast
-            apply fract_not_zero_of_mod_not_zero_q (n ^ 2 + 19 * m ^ 2) 8
-            . exact Int.sign_eq_one_iff_pos.mp rfl
-            . cases Int.emod_two_eq_zero_or_one n with
-              | inl even =>
-                have e : n % 2 = 0 ↔ n ≡ 0 [ZMOD 2] := Eq.to_iff rfl
-                rw [e] at even
-                have meven := Int.ModEq.trans h.right.symm even
-                cases even_zero_or_two_mod_four even with
-                | inl zeron =>
-                  cases even_zero_or_two_mod_four meven with
-                  | inl zerom =>
-                    have : s.val / 2 ∈ R := by
-                      exists n / 2, m / 2
-                      apply And.intro
-                      . rw [h.left]
-                        apply Complex.ext
-                        . rw [Complex.div_ofNat_re, ←div_by_k_exact_on_mult n two_ne_zero even]
-                          ring_nf
-                        . rw [Complex.div_ofNat_im, ←div_by_k_exact_on_mult m two_ne_zero meven]
-                          ring_nf
-                      . have eq : (n / 2) * 2 ≡ (m / 2) * 2 [ZMOD 4] := by
-                          have rn : (n / 2) * 2 = n := by
-                            rify
-                            rw [←div_by_k_exact_on_mult n two_ne_zero even]
-                            simp
-                          have rm : (m / 2) * 2 = m := by
-                            rify
-                            rw [←div_by_k_exact_on_mult m two_ne_zero meven]
-                            simp
-                          rw [rn, rm]
-                          exact Int.ModEq.trans zeron zerom.symm
-                        exact Int.ModEq.cancel_right_div_gcd (zero_lt_four) eq
-                    contradiction
-                  | inr twom =>
-                    by_contra abs'
-                    have abs : n ^ 2 + 19 * m ^ 2 ≡ 0 + 76 [ZMOD 8] := by
-                      apply Int.ModEq.add
-                      . exact sq_zero_mod_four_zero_mod_eight zeron
-                      . have th : 19 * m ^ 2 ≡ 19 * 4 [ZMOD 8] := Int.ModEq.mul_left 19 (sq_two_mod_four_four_mod_eight twom)
-                        simp only [Int.reduceMul] at th
-                        exact th
-                    rw [zero_add] at abs
-                    have := Int.ModEq.trans abs.symm abs'
-                    contradiction
-                | inr twon =>
-                  cases even_zero_or_two_mod_four meven with
-                  | inl zerom =>
-                    by_contra abs'
-                    have abs : n ^ 2 + 19 * m ^ 2 ≡ 4 + 0 [ZMOD 8] := by
-                      apply Int.ModEq.add
-                      . exact sq_two_mod_four_four_mod_eight twon
-                      . have th : 19 * m ^ 2 ≡ 19 * 0 [ZMOD 8] := Int.ModEq.mul_left 19 (sq_zero_mod_four_zero_mod_eight zerom)
-                        rw [mul_zero] at th
-                        exact th
-                    rw [add_zero] at abs
-                    have := Int.ModEq.trans abs.symm abs'
-                    contradiction
-                  | inr twom =>
-                    have : s.val / 2 ∈ R := by
-                      exists n / 2, m / 2
-                      apply And.intro
-                      . rw [h.left]
-                        apply Complex.ext
-                        . rw [Complex.div_ofNat_re, ←div_by_k_exact_on_mult n two_ne_zero even]
-                          ring_nf
-                        . rw [Complex.div_ofNat_im, ←div_by_k_exact_on_mult m two_ne_zero meven]
-                          ring_nf
-                      . have eq : (n / 2) * 2 ≡ (m / 2) * 2 [ZMOD 4] := by
-                          have rn : (n / 2) * 2 = n := by
-                            rify
-                            rw [←div_by_k_exact_on_mult n two_ne_zero even]
-                            simp
-                          have rm : (m / 2) * 2 = m := by
-                            rify
-                            rw [←div_by_k_exact_on_mult m two_ne_zero meven]
-                            simp
-                          rw [rn, rm]
-                          exact Int.ModEq.trans twon twom.symm
-                        exact Int.ModEq.cancel_right_div_gcd (zero_lt_four) eq
-                    contradiction
-              | inr odd =>
-                have e : n % 2 = 1 ↔ n ≡ 1 [ZMOD 2] := Eq.to_iff rfl
-                rw [e] at odd
-                have modd := Int.ModEq.trans h.right.symm odd
-                have eq1 := odd_one_mod_eight odd
-                have eq2 := odd_one_mod_eight modd
-                by_contra abs'
-                have abs : n ^ 2 + 19 * m ^ 2 ≡ 1 + 19 [ZMOD 8] := by
-                  apply Int.ModEq.add
-                  . exact eq1
-                  . have th : 19 * m ^ 2 ≡ 19 * 1 [ZMOD 8] := Int.ModEq.mul_left 19 eq2
-                    rw [mul_one] at th
-                    exact th
-                simp only [Int.reduceAdd] at abs
-                have := Int.ModEq.trans abs.symm abs'
-                contradiction
-          exact (div_ne_zero_iff.mp th).left
-        . rw [dh_rel_on_r]
-          have eq1 : Complex.normSq u * Complex.normSq (s' + t' * v / u) = Complex.normSq (s' * u + t' * v : R) := calc
-            _ = Complex.normSq (u * (s' + t' * v / u)) := by rw [Complex.normSq_mul]
-            _ = _ := by
-              have eq : u * (s' + t' * v.val / u) = (s' * u + t' * v : R) := calc
-                u * (s' + t' *v.val / u) = s' * u + t' * v.val * u / u := by ring
-                _ = s' * u + t' * v.val * (u.val * u.val⁻¹) := by rw [div_eq_mul_inv, mul_assoc]
-                _ = s' * u + t' * v.val := by rw [Field.mul_inv_cancel u.val nzero_c]; simp
-                _ = (s' * u + t' * v : R) := rfl
-              rw [←eq]
-          have eq2 : Complex.normSq u = Complex.normSq u * 1 := by simp
-          rw [←eq1]
-          conv_rhs => rw [eq2]
-          apply mul_lt_mul_of_pos_left
-          . rw [Complex.normSq]
-            simp only [MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk, Complex.add_re, Complex.add_im]
-            rw [eq₀, eq₁, eq₂]
-            simp only [add_zero, mul_zero]
-            rw [((by simp) : (1 : ℝ) = 1 * 1)]
-            rw [eq₃]
-            push_cast
-            rw [neg_add_eq_sub]
-            apply mul_lt_mul'
-            . apply le_of_lt
-              rw [sub_lt_comm]
-              exact Int.sub_one_lt_floor (t' * v.val / u).re
-            . rw [sub_lt_comm]
-              exact Int.sub_one_lt_floor (t' * v.val / u).re
-            . exact sub_nonneg_of_le (Int.floor_le _)
-            . exact zero_lt_one
-          . simpa
-    | inr neq =>
-      exists s, 2
-      refine And.intro ?_ hs
-      rw [dh_rel_on_r]
-      have is_zero : Complex.normSq (0 : R) = 0 := calc
-        _ = Complex.normSq (0 : ℂ) := rfl
-        _ = 0 := by simp
-      have := Subtype.coe_ne_coe.mpr neq
-      simpa [is_zero]
+      | inr neq =>
+        have := Subtype.coe_ne_coe.mpr neq
+        simpa [is_zero]
+    | inr special =>
+      rw [not_or, not_ne_iff] at special
+      exact special_case s nzero_c special.left special.right
 
 instance R_dh_domain : DedekindHasseDomain R where
   r := dh_rel_on_r
