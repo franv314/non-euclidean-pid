@@ -99,7 +99,7 @@ lemma norm_frac (s t u v : R) :
 lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
   ((u : ℂ) ≠ 0) →
   (h ≡ k [ZMOD 2] ∧ |(t * v.val / u).re - ↑h / 2| ≤ 1 / 2) →
-  (↑k * √19 / 2 - √3 / 2 < (t * v.val / u).im ∧ (t * v.val / u).im < ↑k * √19 / 2 + √3 / 2) →
+  (t * v.val / u).im ∈ Set.Ioo (↑k * √19 / 2 - √3 / 2) (↑k * √19 / 2 + √3 / 2) →
   ∃ s, dh_rel_on_r (s * u + t * v) u
 := by
   intro nzero_c hh hk
@@ -156,7 +156,7 @@ lemma in_strip_low_distance {h k : ℤ} {u v : R} (t : R) :
 lemma small_of_small_sum (x y : ℝ) : x + y ≤ 1 → x ≤ 1 / 2 ∨ y ≤ 1 / 2 := by
   intro
   by_contra abs
-  simp at abs
+  simp only [not_or] at abs
   linarith
 
 lemma close_int (x : ℝ) : ∃ l : ℤ, |x - l| ≤ 1 / 2 := by
@@ -288,7 +288,7 @@ lemma strip_diseq : (√19 - 2 * √3) / 2 < √3 / 2 := by
   . ring_nf
     exact mul_pos (Real.sqrt_pos_of_pos three_pos) three_pos
   . ring_nf
-    simp
+    simp only [Nat.ofNat_nonneg, Real.sq_sqrt]
     norm_cast
 
 lemma twice_in_strip {x : ℝ} :
