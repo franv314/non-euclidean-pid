@@ -1,6 +1,6 @@
 # Non Euclidean PID
 
-A proof that $R = \mathbb{Z}[(1+i\sqrt{19})/2]$ is a PID but not a Euclidean domain, written in Lean 4
+A proof that $R = \mathbb{Z}[(1+i\sqrt{19})/2]$ is a PID but not a Euclidean domain, written (quite badly) in Lean 4
 
 # RoadMap
 
